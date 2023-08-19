@@ -3,7 +3,22 @@ services:
         build: .
         ports:
             - 8080:8080
+        environment:
+            DB_URI: "postgresql://postgres:${DB_PASSWORD}@db?sslmode=disable"
+        depends_on:
+            - db
+        networks:
+            - backend
+    db:
+        image: postgres:15-alpine3.18
+        environment:
+            POSTGRES_PASSWORD: "${DB_PASSWORD}"
+        volumes:
+            - ./db/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+            - pgsql:/var/lib/postgresql/data
         networks:
             - backend
 networks:
     backend:
+volumes:
+    pgsql:
