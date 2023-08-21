@@ -36,5 +36,6 @@ type Store struct {
 	Users interface {
 		Insert(ctx context.Context, users ...*User) error
 		DeleteOne(ctx context.Context, id string) error
+		Update(context.Context, *UserFilter, *UserUpdater) error
 	}
 }

@@ -33,7 +33,11 @@ type Handler struct {
 
 // ServeHTTP implements http.Handler on Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := h.DB.Users.DeleteOne(r.Context(), "3533ic355kpzoccy")
+	err := h.DB.Users.Update(
+		r.Context(),
+		&db.UserFilter{Uid: "3533ic355kpzoccy"},
+		&db.UserUpdater{Username: "updated"},
+	)
 	if err == nil || errors.Is(err, db.ErrNoRows) {
 		// log ErrNoRows??
 		w.WriteHeader(http.StatusNoContent)
@@ -44,5 +48,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
+	log.Printf("%v: %#v", err, err)
 	w.WriteHeader(http.StatusInternalServerError)
 }

@@ -1,8 +1,10 @@
 package postgres
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"html/template"
 	"log"
 
 	"github.com/manojnakp/scount/db"
@@ -16,6 +18,22 @@ VALUES ($1, $2, $3, $4);`
 // UserDeleteQuery is a query statement for deleting single user by uid.
 const UserDeleteQuery = `
 DELETE FROM users WHERE uid = $1;`
+
+// UserUpdateTemplate is a query template for updating users from UserCollection.
+var UserUpdateTemplate = template.Must(template.New("user-update").
+	Funcs(template.FuncMap{
+		"add": func(x, y int) int { return x + y },
+	}).
+	Parse(`
+UPDATE users SET
+{{ range $i, $col := . }}
+	{{ $col }} = {{ add $i 9 | printf "$%d" }}
+{{ end }}
+WHERE ($1 OR uid = $2)
+AND ($3 OR email = $4)
+AND ($5 OR username ILIKE $6)
+AND ($7 OR password = $8);
+`))
 
 // UserCollection provides a convenient way to interact
 // with `users` table.
@@ -72,4 +90,64 @@ func (colln UserCollection) DeleteOne(ctx context.Context, id string) error {
 		return db.ErrNoRows
 	}
 	return nil
+}
+
+// Update modifies users from `users` collection.
+func (colln UserCollection) Update(
+	ctx context.Context,
+	filter *db.UserFilter,
+	setter *db.UserUpdater,
+) error {
+	// construct query from template
+	query, args, err := colln.buildUpdateQuery(filter, setter)
+	if err != nil {
+		return err
+	}
+	// execute query
+	res, err := colln.DB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return Error(err)
+	}
+	// expect at least 1 row to be updated
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return db.ErrNoRows
+	}
+	// all good
+	return nil
+}
+
+// buildUpdateQuery constructs user update query using provided filter,
+// setter and UserUpdateTemplate.
+func (colln UserCollection) buildUpdateQuery(
+	filter *db.UserFilter,
+	setter *db.UserUpdater,
+) (string, []any, error) {
+	args := make([]any, 0)
+	// WHERE clause
+	args = append(args, filter.Uid == "", filter.Uid)
+	args = append(args, filter.Email == "", filter.Email)
+	args = append(args, filter.Username == "", filter.Username)
+	args = append(args, filter.Password == "", filter.Password)
+	// cols for template arguments
+	cols := make([]string, 0)
+	if setter.Username != "" {
+		cols = append(cols, "username")
+		args = append(args, setter.Username)
+	}
+	if setter.Password != "" {
+		cols = append(cols, "password")
+		args = append(args, setter.Password)
+	}
+	// construct
+	buf := new(bytes.Buffer)
+	err := UserUpdateTemplate.Execute(buf, cols)
+	if err != nil {
+		log.Println("tmpl exec user-update: ", err)
+		return "", nil, err
+	}
+	return buf.String(), args, nil
 }
