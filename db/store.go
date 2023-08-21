@@ -11,6 +11,7 @@ var (
 	ErrConflict        = errors.New("db: database state violation")
 	ErrSyntaxPrivilege = errors.New("db: syntax error or insufficient privilege")
 	ErrInvalidData     = errors.New("db: invalid data for database operation")
+	ErrNil             = errors.New("db: nil pointer")
 )
 
 // assertion
@@ -34,7 +35,7 @@ func (err Error) Unwrap() []error {
 // Store provides an interface for all datastore operations in one place.
 type Store struct {
 	Users interface {
-		Insert(ctx context.Context, users ...*User) error
+		Insert(ctx context.Context, users ...User) error
 		DeleteOne(ctx context.Context, id string) error
 		Update(context.Context, *UserFilter, *UserUpdater) error
 	}

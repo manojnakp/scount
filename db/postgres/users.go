@@ -42,7 +42,7 @@ type UserCollection struct {
 }
 
 // Insert adds one or more users to colln. Does nothing if no users to insert.
-func (colln UserCollection) Insert(ctx context.Context, users ...*db.User) error {
+func (colln UserCollection) Insert(ctx context.Context, users ...db.User) error {
 	if len(users) == 0 {
 		return db.ErrNoRows
 	}
@@ -126,6 +126,12 @@ func (colln UserCollection) buildUpdateQuery(
 	filter *db.UserFilter,
 	setter *db.UserUpdater,
 ) (string, []any, error) {
+	if filter == nil {
+		filter = new(db.UserFilter)
+	}
+	if setter == nil {
+		setter = new(db.UserUpdater)
+	}
 	args := make([]any, 0)
 	// WHERE clause
 	args = append(args, filter.Uid == "", filter.Uid)

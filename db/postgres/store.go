@@ -65,6 +65,10 @@ func Tx[T any](
 	sqldb *sql.DB,
 	callback func(*sql.Tx) (T, error),
 ) (t T, err error) {
+	if sqldb == nil {
+		err = db.ErrNil
+		return
+	}
 	tx, err := sqldb.BeginTx(ctx, nil)
 	if err != nil {
 		return
