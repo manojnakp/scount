@@ -13,6 +13,10 @@ const UserInsertQuery = `
 INSERT INTO users (uid, email, username, password)
 VALUES ($1, $2, $3, $4);`
 
+// UserDeleteQuery is a query statement for deleting single user by uid.
+const UserDeleteQuery = `
+DELETE FROM users WHERE uid = $1;`
+
 // UserCollection provides a convenient way to interact
 // with `users` table.
 type UserCollection struct {
@@ -52,4 +56,20 @@ func (colln UserCollection) Insert(ctx context.Context, users ...*db.User) error
 		return zero, nil
 	})
 	return err
+}
+
+// DeleteOne removes exactly 1 user from `users` collection based on id.
+func (colln UserCollection) DeleteOne(ctx context.Context, id string) error {
+	res, err := colln.DB.ExecContext(ctx, UserDeleteQuery, id)
+	if err != nil {
+		return Error(err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return db.ErrNoRows
+	}
+	return nil
 }

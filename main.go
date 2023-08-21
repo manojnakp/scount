@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/manojnakp/scount/api"
 	"github.com/manojnakp/scount/db"
 	"github.com/manojnakp/scount/db/postgres"
 
@@ -27,27 +26,23 @@ func main() {
 	_ = http.ListenAndServe(":8080", r)
 }
 
+// Handler is a home route http handler. Debugging code goes in this handler.
 type Handler struct {
 	DB *db.Store
 }
 
+// ServeHTTP implements http.Handler on Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	id := api.GenereateID()
-	user := &db.User{
-		Uid:      id,
-		Email:    "someone.else@example.com",
-		Username: "Some One Else",
-		Password: "lsjiaw2g5h",
-	}
-	err := h.DB.Users.Insert(r.Context(), user)
-	if err != nil {
-		log.Println(err)
-		if errors.Is(err, db.ErrConflict) {
-			w.WriteHeader(http.StatusConflict)
-			return
-		}
-		w.WriteHeader(http.StatusInternalServerError)
+	err := h.DB.Users.DeleteOne(r.Context(), "3533ic355kpzoccy")
+	if err == nil || errors.Is(err, db.ErrNoRows) {
+		// log ErrNoRows??
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	_, _ = w.Write([]byte(id))
+	if errors.Is(err, db.ErrConflict) {
+		log.Println(err)
+		w.WriteHeader(http.StatusConflict)
+		return
+	}
+	w.WriteHeader(http.StatusInternalServerError)
 }

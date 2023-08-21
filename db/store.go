@@ -5,6 +5,7 @@ import (
 	"errors"
 )
 
+// some common errors.
 var (
 	ErrNoRows          = errors.New("db: no rows in result")
 	ErrConflict        = errors.New("db: database state violation")
@@ -34,5 +35,6 @@ func (err Error) Unwrap() []error {
 type Store struct {
 	Users interface {
 		Insert(ctx context.Context, users ...*User) error
+		DeleteOne(ctx context.Context, id string) error
 	}
 }
