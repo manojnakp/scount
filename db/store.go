@@ -38,5 +38,7 @@ type Store struct {
 		Insert(ctx context.Context, users ...User) error
 		DeleteOne(ctx context.Context, id string) error
 		Update(context.Context, *UserFilter, *UserUpdater) error
+		FindOne(ctx context.Context, id string) (User, error)
+		FindByEmail(ctx context.Context, email string) (User, error)
 	}
 }

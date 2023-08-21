@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -33,21 +34,15 @@ type Handler struct {
 
 // ServeHTTP implements http.Handler on Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := h.DB.Users.Update(
-		r.Context(),
-		&db.UserFilter{Uid: "3533ic355kpzoccy"},
-		&db.UserUpdater{Username: "updated"},
-	)
-	if err == nil || errors.Is(err, db.ErrNoRows) {
-		// log ErrNoRows??
-		w.WriteHeader(http.StatusNoContent)
+	user, err := h.DB.Users.FindByEmail(r.Context(), "someone@example.com")
+	if err != nil {
+		if errors.Is(err, db.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		log.Printf("%v: %#v", err, err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if errors.Is(err, db.ErrConflict) {
-		log.Println(err)
-		w.WriteHeader(http.StatusConflict)
-		return
-	}
-	log.Printf("%v: %#v", err, err)
-	w.WriteHeader(http.StatusInternalServerError)
+	_ = json.NewEncoder(w).Encode(user)
 }

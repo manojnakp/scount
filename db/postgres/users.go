@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"html/template"
 	"log"
 
@@ -18,6 +19,18 @@ VALUES ($1, $2, $3, $4);`
 // UserDeleteQuery is a query statement for deleting single user by uid.
 const UserDeleteQuery = `
 DELETE FROM users WHERE uid = $1;`
+
+// UserSelectQuery is a query statement for fetching single user by uid.
+const UserSelectQuery = `
+SELECT uid, email, username, password
+FROM users
+WHERE uid = $1;`
+
+// UserByEmailQuery is a query statement for fetching single user by email.
+const UserByEmailQuery = `
+SELECT uid, email, username, password
+FROM users
+WHERE email = $1;`
 
 // UserUpdateTemplate is a query template for updating users from UserCollection.
 var UserUpdateTemplate = template.Must(template.New("user-update").
@@ -156,4 +169,32 @@ func (colln UserCollection) buildUpdateQuery(
 		return "", nil, err
 	}
 	return buf.String(), args, nil
+}
+
+// FindOne fetches user from colln by id.
+func (colln UserCollection) FindOne(ctx context.Context, id string) (u db.User, err error) {
+	var user db.User
+	err = colln.DB.QueryRowContext(ctx, UserSelectQuery, id).
+		Scan(&user.Uid, &user.Email, &user.Username, &user.Password)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = db.ErrNoRows
+		}
+		return
+	}
+	return user, nil
+}
+
+// FindByEmail fetches user from colln by email.
+func (colln UserCollection) FindByEmail(ctx context.Context, email string) (u db.User, err error) {
+	var user db.User
+	err = colln.DB.QueryRowContext(ctx, UserByEmailQuery, email).
+		Scan(&user.Uid, &user.Email, &user.Username, &user.Password)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = db.ErrNoRows
+		}
+		return
+	}
+	return user, nil
 }
