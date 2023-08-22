@@ -18,6 +18,7 @@ var (
 // assertion
 var _ error = Error{}
 
+// Error is a wrapper for error types with a pretty message.
 type Error struct {
 	Pretty error
 	Err    error
@@ -43,6 +44,16 @@ type Store struct {
 		FindOne(ctx context.Context, id string) (User, error)
 		FindByEmail(ctx context.Context, email string) (User, error)
 	}
+}
+
+// Collection is a generic implementation of a collection with
+// support for basic CRUD operations.
+type Collection[Item, Filter, Updater any] interface {
+	Insert(ctx context.Context, items ...Item) error
+	DeleteOne(ctx context.Context, id string) error
+	Update(context.Context, *Filter, *Updater) error
+	Find(context.Context, *Filter, *Projector) (List[Item], error)
+	FindOne(ctx context.Context, id string) (Item, error)
 }
 
 // Paging provides pagination options for querying the database.
