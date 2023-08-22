@@ -8,6 +8,8 @@ import (
 	"html/template"
 	"log"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/manojnakp/scount/db"
 )
 
@@ -46,6 +48,25 @@ WHERE ($1 OR uid = $2)
 AND ($3 OR email = $4)
 AND ($5 OR username ILIKE $6)
 AND ($7 OR password = $8);
+`))
+
+// UserSelectTemplate is a query template for finding users from UserCollection.
+var UserSelectTemplate = template.Must(template.New("user-select").
+	Parse(`
+{{ $sort := "uid" }}
+{{ if .Sort }} {{ $sort = .Sort }} {{ end }}
+SELECT uid, email, username, password,
+count(uid) OVER () AS total
+FROM users
+WHERE ($1 OR uid = $2)
+AND ($3 OR email = $4)
+AND ($5 OR username ILIKE $6)
+AND ($7 OR password = $8)
+ORDER BY {{ $sort }} {{ if .Desc }} DESC {{ end }}
+{{ with .Paging }}
+	LIMIT {{ .Limit }}
+	OFFSET {{ .Offset }}
+{{ end }};
 `))
 
 // UserCollection provides a convenient way to interact
@@ -133,17 +154,10 @@ func (colln UserCollection) Update(
 	return nil
 }
 
-// buildUpdateQuery constructs user update query using provided filter,
-// setter and UserUpdateTemplate.
-func (colln UserCollection) buildUpdateQuery(
-	filter *db.UserFilter,
-	setter *db.UserUpdater,
-) (string, []any, error) {
+// buildArgs constructs query arguments using provided filter.
+func (colln UserCollection) buildArgs(filter *db.UserFilter) []any {
 	if filter == nil {
 		filter = new(db.UserFilter)
-	}
-	if setter == nil {
-		setter = new(db.UserUpdater)
 	}
 	args := make([]any, 0)
 	// WHERE clause
@@ -151,6 +165,19 @@ func (colln UserCollection) buildUpdateQuery(
 	args = append(args, filter.Email == "", filter.Email)
 	args = append(args, filter.Username == "", filter.Username)
 	args = append(args, filter.Password == "", filter.Password)
+	return args
+}
+
+// buildUpdateQuery constructs user update query using provided filter,
+// setter and UserUpdateTemplate.
+func (colln UserCollection) buildUpdateQuery(
+	filter *db.UserFilter,
+	setter *db.UserUpdater,
+) (string, []any, error) {
+	if setter == nil {
+		setter = new(db.UserUpdater)
+	}
+	args := colln.buildArgs(filter)
 	// cols for template arguments
 	cols := make([]string, 0)
 	if setter.Username != "" {
@@ -197,4 +224,63 @@ func (colln UserCollection) FindByEmail(ctx context.Context, email string) (u db
 		return
 	}
 	return user, nil
+}
+
+// Find fetches all the users from colln subject to filter and projector
+// options specified.
+func (colln UserCollection) Find(
+	ctx context.Context,
+	filter *db.UserFilter,
+	projector *db.Projector,
+) (list db.List[db.User], err error) {
+	// construct query from template
+	query, args, err := colln.buildSelectQuery(filter, projector)
+	if err != nil {
+		return
+	}
+	// execute query
+	rows, err := colln.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		err = Error(err)
+		return
+	}
+	defer rows.Close()
+	var users []db.User
+	var total int
+	// scan through the rows
+	for rows.Next() {
+		var u db.User
+		err = rows.Scan(&u.Uid, &u.Email, &u.Username, &u.Password, &total)
+		if err != nil {
+			return
+		}
+		users = append(users, u)
+	}
+	if err = rows.Err(); err != nil {
+		return
+	}
+	return db.List[db.User]{Data: users, Total: total}, nil
+}
+
+// buildSelectQuery constructs user select query using
+// provided filter, projector and UserSelectTemplate.
+func (colln UserCollection) buildSelectQuery(
+	filter *db.UserFilter,
+	projector *db.Projector,
+) (string, []any, error) {
+	if projector == nil {
+		projector = new(db.Projector)
+	}
+	if !slices.Contains(db.UserAllowedCols, projector.Sort) {
+		return "", nil, db.ErrInvalidColumn
+	}
+	args := colln.buildArgs(filter)
+	// construct
+	buf := new(bytes.Buffer)
+	err := UserSelectTemplate.Execute(buf, projector)
+	if err != nil {
+		log.Println("tmpl exec user-select: ", err)
+		return "", nil, err
+	}
+	return buf.String(), args, nil
 }

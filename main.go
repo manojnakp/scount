@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -34,15 +33,14 @@ type Handler struct {
 
 // ServeHTTP implements http.Handler on Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	user, err := h.DB.Users.FindByEmail(r.Context(), "someone@example.com")
+	users, err := h.DB.Users.Find(r.Context(), nil, &db.Projector{
+		Paging: &db.Paging{Limit: 1, Offset: 1},
+	})
 	if err != nil {
-		if errors.Is(err, db.ErrNoRows) {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
 		log.Printf("%v: %#v", err, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	_ = json.NewEncoder(w).Encode(user)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(users)
 }
