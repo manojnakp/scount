@@ -2,24 +2,20 @@ package api
 
 import (
 	"context"
-	"crypto/aes"
 	"encoding/json"
 	"log"
 	"mime"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/manojnakp/scount/api/internal"
-)
 
-// BearerPrefix is prefix used in `Authorization` header.
-const BearerPrefix = "Bearer "
+	"github.com/lestrrat-go/jwx/v2/jwt"
+)
 
 // Context keys used for passing data across middlewares.
 var (
-	BodyKey  internal.BodyKey
-	TokenKey internal.TokenKey
+	BodyKey     internal.BodyKey
+	AuthUserKey internal.AuthUserKey
 )
 
 // Middleware is a convenient alias for http middleware.
@@ -51,36 +47,20 @@ func BodyParser[T any](next http.Handler) http.Handler {
 
 // Authware is the middleware for handling user authentication
 // by validation of auth token in `Authorization` header.
-func Authware(secret [aes.BlockSize]byte) Middleware {
+func Authware(secret []byte) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			header := r.Header.Get("Authorization")
-			prlen := len(BearerPrefix)
-			// missing or non bearer authorization header
-			if len(header) < prlen ||
-				!strings.EqualFold(header[:prlen], BearerPrefix) {
-				w.Header().Set("WWW-Authenticate", "Bearer")
-				w.WriteHeader(http.StatusUnauthorized)
-				log.Println("Authorization != Bearer: ", header)
-				return
-			}
-			opaque := header[prlen:]
-			token := new(AuthToken)
-			err := token.Parse(opaque, secret[:])
-			// token not valid
-			if err != nil || token.Id == "" {
+			token, err := jwt.ParseHeader(
+				r.Header, "Authorization",
+				jwt.WithContext(r.Context()),
+				jwt.WithValidate(true),
+			)
+			if err != nil {
 				w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 				w.WriteHeader(http.StatusUnauthorized)
-				log.Println(err)
 				return
 			}
-			if token.Expiry.Before(time.Now()) {
-				w.Header().Set("WWW-Authenticate", `Bearer error="expired_token"`)
-				w.WriteHeader(http.StatusUnauthorized)
-				log.Println(token.Expiry, time.Now())
-				return
-			}
-			ctx := context.WithValue(r.Context(), TokenKey, token)
+			ctx := context.WithValue(r.Context(), AuthUserKey, token.Subject())
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
