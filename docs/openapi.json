@@ -7,10 +7,102 @@
     },
     "servers": [
         {
-            "url": "..",
+            "url": "/.",
             "description": "api server hosted at root path"
         }
     ],
-    "paths": {},
-    "components": {}
+    "paths": {
+        "/auth/register": {
+            "post": {
+                "operationId": "RegisterUser",
+                "tags": ["auth"],
+                "summary": "Sign up a new user",
+                "description": "Send user information and password to sign up for SCount and obtain a unique userid",
+                "requestBody": {
+                    "description": "User information and new set of credentials for sign up",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "./RegisterRequest.schema.json"
+                            },
+                            "example": {
+                                "username": "John doe",
+                                "email": "john@jdoe.net",
+                                "password": "iamjd0e"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sign up successfull, here's your user id.",
+                        "headers": {
+                            "location": {
+                                "description": "URI of the user resource for the newly signed up user",
+                                "schema": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "example": "/users/2kj3e9ps8uq934ph"
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "./RegisterResponse.schema.json"
+                                },
+                                "example": {
+                                    "user_id": "2kj3e9ps8uq934ph"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "415": {
+                        "$ref": "#/components/responses/UnsupportedMediaType"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/UnprocessableContent"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalServerError"
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/DefaultResponse"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "responses": {
+            "DefaultResponse": {
+                "description": "Could not serve the request due to certain issues."
+            },
+            "BadRequest": {
+                "description": "Cannot serve content because of malformed request body or syntax"
+            },
+            "Conflict": {
+                "description": "The request conflicts or causes a conflict (after requested operation) with the state of server."
+            },
+            "UnsupportedMediaType": {
+                "description": "The media format of the requested data is not supported by the server, so the server is rejecting the request."
+            },
+            "UnprocessableContent": {
+                "description": "The request was well-formed but was unable to be followed due to semantic errorsor validation failure."
+            },
+            "InternalServerError": {
+                "description": "The server has encountered a situation it does not know how to handle."
+            }
+        }
+    },
+    "tags": [
+        {"name": "auth", "description": "Operations related to authentication"}
+  ]
 }

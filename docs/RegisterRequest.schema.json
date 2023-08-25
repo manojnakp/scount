@@ -1,0 +1,28 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "username": {
+            "type": "string"
+        },
+        "email": {
+            "type": "string",
+            "format": "email"
+        },
+        "password": {
+            "type": "string"
+        }
+    },
+    "examples": [
+        {
+            "username": "John doe",
+            "email": "john@jdoe.net",
+            "password": "iamjd0e"
+        },
+        {
+            "username": "alex",
+            "email": "alex@example.org",
+            "password": "keepitsecret"
+        }
+    ]
+}

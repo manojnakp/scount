@@ -1,0 +1,17 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "user_id": {
+            "type": "string"
+        }
+    },
+    "examples": [
+        {
+            "user_id": "2kj3e9ps8uq934ph"
+        },
+        {
+            "user_id": "536j5khg64jh632i"
+        }
+    ]
+}
