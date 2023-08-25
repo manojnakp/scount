@@ -26,7 +26,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Mount("/docs/", DocHandler{}.Router())
 	r.Handle("/docs", http.RedirectHandler("/docs/", http.StatusMovedPermanently))
-	_ = store
+	r.Mount("/auth", api.AuthResource{DB: store}.Router())
 	r.HandleFunc("/health", HealthCheck)
 	_ = http.ListenAndServe(":8080", r)
 }
