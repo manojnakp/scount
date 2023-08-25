@@ -2,8 +2,15 @@
     "openapi": "3.1.0",
     "info": {
         "title": "SCount",
+        "description": "A simple expense sharing application for splitting and balancing bills among friends.",
         "version": "0.0.1"
     },
+    "servers": [
+        {
+            "url": "..",
+            "description": "api server hosted at root path"
+        }
+    ],
     "paths": {},
     "components": {}
 }
