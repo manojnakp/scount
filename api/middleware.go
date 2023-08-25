@@ -21,6 +21,14 @@ var (
 // Middleware is a convenient alias for http middleware.
 type Middleware = func(http.Handler) http.Handler
 
+// Validator is any type that has validation logic defined on it.
+type Validator interface {
+	// Validate checks if `this` is valid.
+	// nil error upon success and
+	// non-nil error means failure.
+	Validate() error
+}
+
 // BodyParser is a generic json body parser. Parsed body is stored in
 // context with key BodyKey.
 func BodyParser[T any](next http.Handler) http.Handler {
@@ -42,6 +50,24 @@ func BodyParser[T any](next http.Handler) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), BodyKey, body)
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// Validware is middleware for validation of request body.
+//
+// Pre-requisite: BodyKey should be present in request context
+// and of type T.
+func Validware[T Validator](next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// assume BodyKey in context is not `nil` and conforms to `T` type
+		body := r.Context().Value(BodyKey).(T)
+		err := body.Validate()
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			log.Println(err)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
