@@ -7,6 +7,8 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/lestrrat-go/jwx/v2/jwa"
+
 	"github.com/manojnakp/scount/api/internal"
 
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -73,21 +75,20 @@ func Validware[T Validator](next http.Handler) http.Handler {
 
 // Authware is the middleware for handling user authentication
 // by validation of auth token in `Authorization` header.
-func Authware(secret []byte) Middleware {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token, err := jwt.ParseHeader(
-				r.Header, "Authorization",
-				jwt.WithContext(r.Context()),
-				jwt.WithValidate(true),
-			)
-			if err != nil {
-				w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			ctx := context.WithValue(r.Context(), AuthUserKey, token.Subject())
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
+func Authware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, err := jwt.ParseHeader(
+			r.Header, "Authorization",
+			jwt.WithContext(r.Context()),
+			jwt.WithValidate(true),
+			jwt.WithKey(jwa.HS256, GetKey()),
+		)
+		if err != nil {
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), AuthUserKey, token.Subject())
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
