@@ -1,14 +1,20 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"path"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/manojnakp/scount/db"
 )
+
+// BCryptCost is the cost used for bcrypt password hashing.
+const BCryptCost = 12
 
 // RegisterRequest is the JSON request body format
 // at the `/auth/register` endpoint.
@@ -58,15 +64,22 @@ func (res AuthResource) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux.ServeHTTP(w, r)
 }
 
+// register handles user sign up.
 func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(BodyKey).(RegisterRequest)
 	uid := GenerateID()
+	buf, err := bcrypt.GenerateFromPassword([]byte(body.Password), BCryptCost)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	password := base64.StdEncoding.EncodeToString(buf)
 	// insert into db
-	err := res.DB.Users.Insert(r.Context(), db.User{
+	err = res.DB.Users.Insert(r.Context(), db.User{
 		Uid:      uid,
 		Email:    body.Email,
 		Username: body.Username,
-		Password: body.Password,
+		Password: password,
 	})
 	// match error
 	switch {
