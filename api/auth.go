@@ -48,39 +48,7 @@ type AuthResource struct {
 func (res AuthResource) Router() chi.Router {
 	r := chi.NewRouter()
 	r.With(BodyParser[RegisterRequest], Validware[RegisterRequest]).
-		Post("/register", func(w http.ResponseWriter, r *http.Request) {
-			body := r.Context().Value(BodyKey).(RegisterRequest)
-			uid := GenerateID()
-			// insert into db
-			err := res.DB.Users.Insert(r.Context(), db.User{
-				Uid:      uid,
-				Email:    body.Email,
-				Username: body.Username,
-				Password: body.Password,
-			})
-			// match error
-			switch {
-			case errors.Is(err, db.ErrInvalidData),
-				errors.Is(err, db.ErrSyntaxPrivilege):
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			case errors.Is(err, db.ErrConflict):
-				w.WriteHeader(http.StatusConflict)
-				return
-			case err != nil:
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			// newly created user resource at location
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Location", path.Join("/users/", uid))
-			w.WriteHeader(http.StatusOK)
-			// json response
-			_ = json.NewEncoder(w).Encode(RegisterResponse{
-				Schema: path.Join("/docs/", "RegisterResponse.schema.json"),
-				UserId: uid,
-			})
-		})
+		Post("/register", res.register)
 	return r
 }
 
@@ -88,4 +56,38 @@ func (res AuthResource) Router() chi.Router {
 func (res AuthResource) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux := res.Router()
 	mux.ServeHTTP(w, r)
+}
+
+func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
+	body := r.Context().Value(BodyKey).(RegisterRequest)
+	uid := GenerateID()
+	// insert into db
+	err := res.DB.Users.Insert(r.Context(), db.User{
+		Uid:      uid,
+		Email:    body.Email,
+		Username: body.Username,
+		Password: body.Password,
+	})
+	// match error
+	switch {
+	case errors.Is(err, db.ErrInvalidData),
+		errors.Is(err, db.ErrSyntaxPrivilege):
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	case errors.Is(err, db.ErrConflict):
+		w.WriteHeader(http.StatusConflict)
+		return
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// newly created user resource at location
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Location", path.Join("/users/", uid))
+	w.WriteHeader(http.StatusOK)
+	// json response
+	_ = json.NewEncoder(w).Encode(RegisterResponse{
+		Schema: path.Join("/docs/", "RegisterResponse.schema.json"),
+		UserId: uid,
+	})
 }
