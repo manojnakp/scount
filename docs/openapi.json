@@ -153,6 +153,14 @@
             "InternalServerError": {
                 "description": "The server has encountered a situation it does not know how to handle."
             }
+        },
+        "securitySchemes": {
+            "token": {
+                "description": "Token based authentication using JWT in 'Authorization' header",
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
         }
     },
     "tags": [
