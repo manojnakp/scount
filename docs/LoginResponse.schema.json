@@ -1,0 +1,17 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "token": {
+            "type": "string"
+        }
+    },
+    "examples": [
+        {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjJrajNlOXBzOHVxOTM0cGgifQ.n0_har5M6WYK5HmSsQarZbJp5A5dNrvKfbINA6eYEQs"
+        },
+        {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjUzNmo1a2hnNjRqaDYzMmkifQ.qgrsFe8HZ2m02oOYgZJbqBknI65BBYWw71cvGyr7QRQ"
+        }
+    ]
+}

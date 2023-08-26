@@ -78,6 +78,59 @@
                     }
                 }
             }
+        },
+        "/auth/login": {
+            "post": {
+                "operationId": "LoginUser",
+                "tags": ["auth"],
+                "summary": "Sign in a user",
+                "description": "User authenticates oneself into the SCount API using valid credentials.",
+                "requestBody": {
+                    "description": "User credentials for sign in",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "./LoginRequest.schema.json"
+                            },
+                            "example": {
+                                "email": "john@jdoe.net",
+                                "password": "iamjd0e"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sign in successfull, use this token to authenticate your requests.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "./LoginResponse.schema.json"
+                                },
+                                "example": {
+                                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjJrajNlOXBzOHVxOTM0cGgifQ.n0_har5M6WYK5HmSsQarZbJp5A5dNrvKfbINA6eYEQs"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "415": {
+                        "$ref": "#/components/responses/UnsupportedMediaType"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/UnprocessableContent"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalServerError"
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/DefaultResponse"
+                    }
+                }
+            }
         }
     },
     "components": {
