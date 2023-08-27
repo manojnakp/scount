@@ -7,10 +7,218 @@
     },
     "servers": [
         {
-            "url": "..",
+            "url": "/.",
             "description": "api server hosted at root path"
         }
     ],
-    "paths": {},
-    "components": {}
+    "paths": {
+        "/auth/register": {
+            "post": {
+                "operationId": "RegisterUser",
+                "tags": ["auth"],
+                "summary": "Sign up a new user",
+                "description": "Send user information and password to sign up for SCount and obtain a unique userid",
+                "requestBody": {
+                    "description": "User information and new set of credentials for sign up",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "./RegisterRequest.schema.json"
+                            },
+                            "example": {
+                                "username": "John doe",
+                                "email": "john@jdoe.net",
+                                "password": "iamjd0e"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sign up successfull, here's your user id.",
+                        "headers": {
+                            "location": {
+                                "description": "URI of the user resource for the newly signed up user",
+                                "schema": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "example": "/users/2kj3e9ps8uq934ph"
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "./RegisterResponse.schema.json"
+                                },
+                                "example": {
+                                    "user_id": "2kj3e9ps8uq934ph"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "415": {
+                        "$ref": "#/components/responses/UnsupportedMediaType"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/UnprocessableContent"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalServerError"
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/DefaultResponse"
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "operationId": "LoginUser",
+                "tags": ["auth"],
+                "summary": "Sign in a user",
+                "description": "User authenticates oneself into the SCount API using valid credentials.",
+                "requestBody": {
+                    "description": "User credentials for sign in",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "./LoginRequest.schema.json"
+                            },
+                            "example": {
+                                "email": "john@jdoe.net",
+                                "password": "iamjd0e"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sign in successfull, use this token to authenticate your requests.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "./LoginResponse.schema.json"
+                                },
+                                "example": {
+                                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjJrajNlOXBzOHVxOTM0cGgifQ.n0_har5M6WYK5HmSsQarZbJp5A5dNrvKfbINA6eYEQs"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "415": {
+                        "$ref": "#/components/responses/UnsupportedMediaType"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/UnprocessableContent"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalServerError"
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/DefaultResponse"
+                    }
+                }
+            }
+        },
+        "/auth/change": {
+            "post": {
+                "operationId": "ChangePassword",
+                "tags": ["auth"],
+                "summary": "Change user password",
+                "description": "Request for updating the set of credentials used for authenticating the user.",
+                "security": [
+                    {"token": []}
+                ],
+                "requestBody": {
+                    "description": "Old and new set of credentials for update.",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "./PasswordChange.schema.json"
+                            },
+                            "example": {
+                                "old": "iamjd0e",
+                                "new": "jd0esecret"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Password change successfull"
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "415": {
+                        "$ref": "#/components/responses/UnsupportedMediaType"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/UnprocessableContent"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalServerError"
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/DefaultResponse"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "responses": {
+            "DefaultResponse": {
+                "description": "Could not serve the request due to certain issues."
+            },
+            "BadRequest": {
+                "description": "Cannot serve content because of malformed request body or syntax"
+            },
+            "Unauthorized": {
+                "description": "User is not authenticated, the resource is protected."
+            },
+            "Conflict": {
+                "description": "The request conflicts or causes a conflict (after requested operation) with the state of server."
+            },
+            "UnsupportedMediaType": {
+                "description": "The media format of the requested data is not supported by the server, so the server is rejecting the request."
+            },
+            "UnprocessableContent": {
+                "description": "The request was well-formed but was unable to be followed due to semantic errorsor validation failure."
+            },
+            "InternalServerError": {
+                "description": "The server has encountered a situation it does not know how to handle."
+            }
+        },
+        "securitySchemes": {
+            "token": {
+                "description": "Token based authentication using JWT in 'Authorization' header",
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "tags": [
+        {"name": "auth", "description": "Operations related to authentication"}
+  ]
 }
