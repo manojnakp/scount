@@ -131,6 +131,58 @@
                     }
                 }
             }
+        },
+        "/auth/change": {
+            "post": {
+                "operationId": "ChangePassword",
+                "tags": ["auth"],
+                "summary": "Change user password",
+                "description": "Request for updating the set of credentials used for authenticating the user.",
+                "security": [
+                    {"token": []}
+                ],
+                "requestBody": {
+                    "description": "Old and new set of credentials for update.",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "./PasswordChange.schema.json"
+                            },
+                            "example": {
+                                "old": "iamjd0e",
+                                "new": "jd0esecret"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Password change successfull"
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Conflict"
+                    },
+                    "415": {
+                        "$ref": "#/components/responses/UnsupportedMediaType"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/UnprocessableContent"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalServerError"
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/DefaultResponse"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -140,6 +192,9 @@
             },
             "BadRequest": {
                 "description": "Cannot serve content because of malformed request body or syntax"
+            },
+            "Unauthorized": {
+                "description": "User is not authenticated, the resource is protected."
             },
             "Conflict": {
                 "description": "The request conflicts or causes a conflict (after requested operation) with the state of server."
