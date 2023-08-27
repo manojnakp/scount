@@ -1,17 +1,20 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-        "token": {
-            "type": "string"
-        }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "response body for login",
+  "description": "Grants the authentication token for the user using which one can access protected resources on the server.",
+  "properties": {
+    "token": {
+      "type": "string",
+      "description": "Token that can be presented to authenticate oneself to the server."
+    }
+  },
+  "examples": [
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjJrajNlOXBzOHVxOTM0cGgifQ.n0_har5M6WYK5HmSsQarZbJp5A5dNrvKfbINA6eYEQs"
     },
-    "examples": [
-        {
-            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjJrajNlOXBzOHVxOTM0cGgifQ.n0_har5M6WYK5HmSsQarZbJp5A5dNrvKfbINA6eYEQs"
-        },
-        {
-            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjUzNmo1a2hnNjRqaDYzMmkifQ.qgrsFe8HZ2m02oOYgZJbqBknI65BBYWw71cvGyr7QRQ"
-        }
-    ]
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjUzNmo1a2hnNjRqaDYzMmkifQ.qgrsFe8HZ2m02oOYgZJbqBknI65BBYWw71cvGyr7QRQ"
+    }
+  ]
 }

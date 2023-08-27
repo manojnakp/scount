@@ -1,6 +1,6 @@
 <!doctype html> <!-- Important: must specify -->
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8"> <!-- Important: rapi-doc uses utf8 characters -->
     <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
     <title>API Reference | SCount</title>
@@ -11,19 +11,30 @@
 among friends.">
     <meta name="keywords" content="split-bills,expenses,friends,restapi,open-source,golang,sveltekit">
     <style>
-      rapi-doc{
-        width:100%;
-      }
+        rapi-doc {
+            width: 100%;
+        }
     </style>
-  </head>
-  <body style="height: 100vh; margin: 0;">
-    <rapi-doc
-        id="thedoc"
-        heading-text="SCount"
-        allow-spec-url-load="false"
-        allow-spec-file-load="false"
-        allow-spec-file-download="true"
-        allow-server-selection="false"
-        spec-url="./openapi.json"></rapi-doc>
-  </body>
+</head>
+<body style="height: 100vh; margin: 0;">
+<rapi-doc
+    id="thedoc"
+    heading-text="SCount"
+    show-method-in-nav-bar="as-colored-text"
+    nav-item-spacing="relaxed"
+    render-style="read"
+    info-description-headings-in-navbar="true"
+    allow-spec-url-load="false"
+    allow-spec-file-load="false"
+    allow-spec-file-download="true"
+    show-curl-before-try="true"
+    allow-server-selection="false"
+    spec-url="./openapi.json"></rapi-doc>
+<!--
+    show-method-in-nav-bar="as-colored-block"
+    render-style="view"
+    show-components="true"
+    schema-style="table"
+-->
+</body>
 </html>

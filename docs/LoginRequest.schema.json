@@ -1,23 +1,27 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-        "email": {
-            "type": "string",
-            "format": "email"
-        },
-        "password": {
-            "type": "string"
-        }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "request body for login",
+  "description": "Provide the server with *email id* and *password* for sign in.",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email ID of the user."
     },
-    "examples": [
-        {
-            "email": "john@jdoe.net",
-            "password": "iamjd0e"
-        },
-        {
-            "email": "alex@example.org",
-            "password": "keepitsecret"
-        }
-    ]
+    "password": {
+      "type": "string",
+      "description": "Password of the user."
+    }
+  },
+  "examples": [
+    {
+      "email": "john@jdoe.net",
+      "password": "iamjd0e"
+    },
+    {
+      "email": "alex@example.org",
+      "password": "keepitsecret"
+    }
+  ]
 }

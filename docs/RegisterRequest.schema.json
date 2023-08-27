@@ -1,28 +1,33 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-        "username": {
-            "type": "string"
-        },
-        "email": {
-            "type": "string",
-            "format": "email"
-        },
-        "password": {
-            "type": "string"
-        }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "request body for user register",
+  "description": "Supply user information and new set of credentials to be used to authenticate the user.",
+  "properties": {
+    "username": {
+      "type": "string",
+      "description": "Human readable name of the user."
     },
-    "examples": [
-        {
-            "username": "John doe",
-            "email": "john@jdoe.net",
-            "password": "iamjd0e"
-        },
-        {
-            "username": "alex",
-            "email": "alex@example.org",
-            "password": "keepitsecret"
-        }
-    ]
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email ID of the user to uniquely identify the user."
+    },
+    "password": {
+      "type": "string",
+      "description": "Password used as credentials to authenticate oneself at the server."
+    }
+  },
+  "examples": [
+    {
+      "username": "John doe",
+      "email": "john@jdoe.net",
+      "password": "iamjd0e"
+    },
+    {
+      "username": "alex",
+      "email": "alex@example.org",
+      "password": "keepitsecret"
+    }
+  ]
 }

@@ -1,9 +1,12 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
+    "title": "response body for user registration",
+    "description": "Upon successful registration, the unique *user id* associated with the user is presented.",
     "properties": {
         "user_id": {
-            "type": "string"
+            "type": "string",
+            "description": "A unique ID associated with this user account."
         }
     },
     "examples": [
