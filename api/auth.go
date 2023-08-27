@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"path"
 
@@ -119,6 +120,7 @@ func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
 	buf, err := bcrypt.GenerateFromPassword([]byte(body.Password), BCryptCost)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
 		return
 	}
 	password := base64.StdEncoding.EncodeToString(buf)
@@ -129,6 +131,9 @@ func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
 		Username: body.Username,
 		Password: password,
 	})
+	if err != nil {
+		log.Println(err)
+	}
 	// match error
 	switch {
 	case errors.Is(err, db.ErrInvalidData),
@@ -157,6 +162,9 @@ func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
 func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(BodyKey).(LoginRequest)
 	user, err := res.DB.Users.FindByEmail(r.Context(), body.Email)
+	if err != nil {
+		log.Println(err)
+	}
 	switch {
 	case errors.Is(err, db.ErrNoRows): // not found
 		w.WriteHeader(http.StatusUnprocessableEntity)
@@ -168,9 +176,13 @@ func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
 	buf, err := base64.StdEncoding.DecodeString(user.Password)
 	if err != nil { // failed
 		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
 		return
 	}
 	err = bcrypt.CompareHashAndPassword(buf, []byte(body.Password))
+	if err != nil {
+		log.Println(err)
+	}
 	switch {
 	// invalid password provided by client in request body
 	case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
@@ -183,6 +195,7 @@ func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
 	token, err := GenerateToken(user.Uid)
 	if err != nil { // base64 failed to decode
 		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
 		return
 	}
 	// json response
@@ -200,6 +213,9 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(AuthUserKey).(string)       // Authware
 	// fetch user details
 	user, err := res.DB.Users.FindOne(r.Context(), id)
+	if err != nil {
+		log.Println(err)
+	}
 	switch {
 	case errors.Is(err, db.ErrNoRows): // no matching user
 		w.Header().Set("WWW-Authenticate", `bearer error="invalid_user"`)
@@ -209,8 +225,17 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	buf, err := base64.StdEncoding.DecodeString(user.Password)
+	if err != nil { // failed to base64 decode
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
 	// check if old password is valid
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Old))
+	err = bcrypt.CompareHashAndPassword(buf, []byte(body.Old))
+	if err != nil {
+		log.Println(err)
+	}
 	switch {
 	// old password does not match
 	case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
@@ -221,9 +246,10 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// ok, now generate hash for new password
-	buf, err := bcrypt.GenerateFromPassword([]byte(body.New), BCryptCost)
+	buf, err = bcrypt.GenerateFromPassword([]byte(body.New), BCryptCost)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
 		return
 	}
 	// base64(hash)
@@ -234,6 +260,9 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 		&db.UserFilter{Uid: user.Uid, Password: user.Password},
 		&db.UserUpdater{Password: password},
 	)
+	if err != nil {
+		log.Println(err)
+	}
 	switch {
 	case errors.Is(err, db.ErrNoRows): // someone changed db in b/w
 		w.WriteHeader(http.StatusUnprocessableEntity)
