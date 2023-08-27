@@ -71,6 +71,24 @@ type LoginResponse struct {
 	Token  string `json:"token"`
 }
 
+// PasswordChange is the JSON request body format
+// at the `/auth/change` endpoint.
+type PasswordChange struct {
+	// /docs/PasswordChange.schema.json
+	// Schema string `json:"$schema,omitempty"`
+	Old string `json:"old"`
+	New string `json:"new"`
+}
+
+// Validate implements Validator on PasswordChange.
+// Simply check non-empty.
+func (r PasswordChange) Validate() error {
+	if r.Old == "" || r.New == "" {
+		return errors.New("api: validation failed")
+	}
+	return nil
+}
+
 // AuthResource is http.Handler for all requests to `/auth`
 type AuthResource struct {
 	DB *db.Store
@@ -83,6 +101,8 @@ func (res AuthResource) Router() chi.Router {
 		Post("/register", res.register)
 	r.With(BodyParser[LoginRequest], Validware[LoginRequest]).
 		Post("/login", res.login)
+	r.With(BodyParser[PasswordChange], Validware[PasswordChange], Authware).
+		Post("/change", res.change)
 	return r
 }
 
@@ -172,4 +192,59 @@ func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
 		Schema: path.Join("/docs/", "LoginResponse.schema.json"),
 		Token:  string(token),
 	})
+}
+
+// change handles password update requests.
+func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
+	body := r.Context().Value(BodyKey).(PasswordChange) // BodyParser
+	id := r.Context().Value(AuthUserKey).(string)       // Authware
+	// fetch user details
+	user, err := res.DB.Users.FindOne(r.Context(), id)
+	switch {
+	case errors.Is(err, db.ErrNoRows): // no matching user
+		w.Header().Set("WWW-Authenticate", `bearer error="invalid_user"`)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// check if old password is valid
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Old))
+	switch {
+	// old password does not match
+	case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// ok, now generate hash for new password
+	buf, err := bcrypt.GenerateFromPassword([]byte(body.New), BCryptCost)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// base64(hash)
+	password := base64.StdEncoding.EncodeToString(buf)
+	// update database where `oldpassword = old, id = uid`
+	err = res.DB.Users.Update(
+		r.Context(),
+		&db.UserFilter{Uid: user.Uid, Password: user.Password},
+		&db.UserUpdater{Password: password},
+	)
+	switch {
+	case errors.Is(err, db.ErrNoRows): // someone changed db in b/w
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	case errors.Is(err, db.ErrConflict): // update causes a conflict
+		w.WriteHeader(http.StatusConflict)
+		return
+	case err != nil: // some server error happened
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent) // ALL OK
+	return
 }
