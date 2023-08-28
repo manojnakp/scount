@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "request body to update user information",
+  "description": "Update the user record of the user with the following data setting only the requested fields.",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "New username to be updated."
+    }
+  },
+  "examples": [
+    {
+      "name": "Alex"
+    },
+    {
+      "name": "Bob"
+    }
+  ]
+}
