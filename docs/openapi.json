@@ -23,6 +23,7 @@
   ],
   "paths": {
     "/auth/register": {
+      "summary": "Operations related to user sign up",
       "post": {
         "operationId": "RegisterUser",
         "tags": [
@@ -93,6 +94,7 @@
       }
     },
     "/auth/login": {
+      "summary": "Operations related to user sign in",
       "post": {
         "operationId": "LoginUser",
         "tags": [
@@ -148,6 +150,7 @@
       }
     },
     "/auth/change": {
+      "summary": "Operations related to password change",
       "post": {
         "operationId": "ChangePassword",
         "tags": [
@@ -202,10 +205,220 @@
           }
         }
       }
+    },
+    "/users/{uid}": {
+      "summary": "Operations related to information on a particular user",
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/userid"
+        }
+      ],
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "fetch user details",
+        "description": "Get the user information about the one requested in `uid`",
+        "operationId": "FetchUser",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/FetchUser"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultResponse"
+          }
+        }
+      }
+    },
+    "/me": {
+      "summary": "Operations related to one's own user account.",
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "fetch my user details",
+        "description": "Get the user information about the currently logged in user.",
+        "operationId": "FetchMyself",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/FetchUser"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "replace my user details",
+        "description": "Replace the user record of the currently logged in user in the server with the following data.",
+        "operationId": "ReplaceMyself",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "requestBody": {
+          "description": "Details to replace in the server user record.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./ReplaceMyself.schema.json"
+              },
+              "example": {
+                "name": "Alex"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Replace user details successful"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableContent"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultResponse"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "update my user details",
+        "description": "Update the user information for the currently logged in user.",
+        "operationId": "UpdateMyself",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "requestBody": {
+          "description": "User details to be updated",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./UpdateMyself.schema.json"
+              },
+              "example": {
+                "name": "Alex"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Update user details successful"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableContent"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "delete user details",
+        "description": "Remove the user record from the server for the currently logged in user.",
+        "operationId": "RemoveMyself",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Remove user details successful"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "components": {
     "responses": {
+      "FetchUser": {
+        "description": "User details for the requested user id *uid*",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./FetchUser.schema.json"
+            },
+            "example": {
+              "id": "zjkhbumnhp6v5eld",
+              "email": "john@jdoe.net",
+              "name": "John Doe"
+            }
+          }
+        }
+      },
       "DefaultResponse": {
         "description": "Could not serve the request due to certain issues."
       },
@@ -214,6 +427,9 @@
       },
       "Unauthorized": {
         "description": "User is not authenticated, the resource is protected."
+      },
+      "NotFound": {
+        "description": "Server cannot find the requested resource."
       },
       "Conflict": {
         "description": "The request conflicts or causes a conflict (after requested operation) with the state of server."
@@ -226,6 +442,19 @@
       },
       "InternalServerError": {
         "description": "The server has encountered a situation it does not know how to handle."
+      }
+    },
+    "parameters": {
+      "userid": {
+        "name": "uid",
+        "in": "path",
+        "description": "*uid* is the user id that uniquely identifies the requested user resource.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "user id of the requested user"
+        },
+        "example": "536j5khg64jh632i"
       }
     },
     "securitySchemes": {
@@ -241,6 +470,10 @@
     {
       "name": "auth",
       "description": "Operations related to authentication"
+    },
+    {
+      "name": "users",
+      "description": "Operations related users"
     }
   ]
 }
