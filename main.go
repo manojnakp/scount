@@ -29,6 +29,8 @@ func main() {
 	r.Mount("/auth", api.AuthResource{DB: store}.Router())
 	r.Mount("/users", api.UserResource{DB: store}.Router())
 	r.Handle("/users/", http.RedirectHandler("/users", http.StatusMovedPermanently))
+	r.Mount("/me", api.MyselfResource{DB: store}.Router())
+	r.Handle("/me/", http.RedirectHandler("/me", http.StatusMovedPermanently))
 	r.HandleFunc("/health", HealthCheck)
 	_ = http.ListenAndServe(":8080", r)
 }
