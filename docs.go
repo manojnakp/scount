@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"mime"
 	"net/http"
 	"path"
 
@@ -25,14 +26,13 @@ type DocHandler struct{}
 func (d DocHandler) Router() chi.Router {
 	r := chi.NewRouter()
 	// serve json files like 'openapi.json'
-	r.Get("/{file}.json", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/{file}", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParamFromCtx(r.Context(), "file")
-		w.Header().Set("Content-Type", "application/json")
-		d.ServeFile(w, r, filename+".json")
+		d.ServeFile(w, r, filename)
 	})
+	r.Handle("/index.html", http.RedirectHandler("/docs/", http.StatusMovedPermanently))
 	// serve html docs
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		d.ServeFile(w, r, "index.html")
 	})
 	return r
@@ -58,6 +58,11 @@ func (d DocHandler) ServeFile(w http.ResponseWriter, _ *http.Request, filename s
 		// otherwise server error
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	extension := path.Ext(filename)
+	mediatype := mime.TypeByExtension(extension)
+	if mediatype != "" {
+		w.Header().Set("Content-Type", mediatype)
 	}
 	_, _ = io.Copy(w, file)
 }
