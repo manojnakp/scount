@@ -19,6 +19,9 @@ func main() {
 		api.SetKey(secret)
 	}
 	uri := os.Getenv("DB_URI")
+	if uri == "" {
+		uri = "postgresql://postgres:secret@localhost?sslmode=disable"
+	}
 	store, err := postgres.Open(uri)
 	if err != nil {
 		log.Fatal(err)
