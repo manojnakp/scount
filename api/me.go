@@ -11,6 +11,8 @@ import (
 
 // MyselfUpdater is JSON request for updating (PATCH) `/me` resource.
 type MyselfUpdater struct {
+	// /docs/MyselfUpdate.json
+	// Schema string `json:"$schema,omitempty"`
 	Username string `json:"username,omitempty"`
 }
 
@@ -21,6 +23,8 @@ func (MyselfUpdater) Validate() error {
 
 // MyselfReplacer is JSON request body for replacing (PUT) `/me` resource.
 type MyselfReplacer struct {
+	// /docs/MyselfReplace.json
+	// Schema string `json:"schema,omitempty"`
 	Username string `json:"username"`
 }
 
@@ -70,6 +74,7 @@ func (res MyselfResource) fetch(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(UserInfo{
+		Schema: "/docs/UserResponse.json",
 		Id:    user.Uid,
 		Email: user.Email,
 		Name:  user.Username,

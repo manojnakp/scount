@@ -14,22 +14,27 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// userAllowedSort is the set of allowed values for *sort* query parameter for user resource queries.
 var userAllowedSort = map[string]bool{
 	"id": true, "email": true,
 	"username": true, "": true,
 }
 
+// allowedOrder is the set of allowed sort order values.
 var allowedOrder = map[string]bool{
 	"asc": true, "dsc": true, "": true,
 }
 
+// PageSize is the default number of items limit to a page.
 const PageSize = 5
 
 // UserInfo is the JSON response body for user request fetch request.
 type UserInfo struct {
-	Id    string
-	Email string
-	Name  string
+	// /docs/UserResponse.json
+	Schema string `json:"$schema,omitempty"`
+	Id     string `json:"id"`
+	Email  string `json:"email"`
+	Name   string `json:"name"`
 }
 
 // UserResource is http.Handler for all requests to `/users`.
@@ -66,9 +71,10 @@ func (res UserResource) fetch(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK) // ALL OK
 	_ = json.NewEncoder(w).Encode(UserInfo{
-		Id:    user.Uid,
-		Email: user.Email,
-		Name:  user.Username,
+		Schema: "/docs/UserResponse.json",
+		Id:     user.Uid,
+		Email:  user.Email,
+		Name:   user.Username,
 	})
 }
 
@@ -145,6 +151,8 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(list) // respond
 }
 
+// linkHeader returns `Link` header with pagination details for given
+// current, first and last pages.
 func (res UserResource) linkHeader(params url.Values, page, first, last int) string {
 	links := make([]string, 0, 4)
 	params.Set("page", strconv.Itoa(first))

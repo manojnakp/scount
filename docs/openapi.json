@@ -4,7 +4,7 @@
     "title": "SCount",
     "summary": "A simple expense sharing application for splitting and balancing bills among friends.",
     "description": "# Usage\n\n* Add expenses by entering the amount and who is paying.\n* Invite participants to the group (SCount) so that they\n  can log their own expenses and review what others\n  have added.\n* View your balance at any time and check the total\n  expense of your entire group.\n* Money you owe others and money you are owed are\n  managed elegantly.\n* Let the application do the calculations. It finds the\n  most efficient way for everyone to pay each other what\n  they owe.\n\n# Key Features\n\n## Everyone can add\n\nYour friends can join via their phones or online to\nadd expenses and check their balances. Anyone involved\nin an SCount can add friends to it.\n\n## Split unevenly\n\nNot every cost will be split equally. Set a different\nlevel of reimbursement for each person. An expense can\nbe split in a particular ratio or according to custom\namounts.\n\n## Share your SCount\n\nSharing an SCount is as simple as sharing the unique url\nof the SCount. Any participating member can view or log\none's expenses to it with no hassle.\n",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "contact": {
       "name": "Manojna",
       "url": "https://github.com/manojnakp",
@@ -25,7 +25,7 @@
     "/auth/register": {
       "summary": "Operations related to user sign up",
       "post": {
-        "operationId": "RegisterUser",
+        "operationId": "UserRegister",
         "tags": [
           "auth"
         ],
@@ -37,7 +37,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./RegisterRequest.schema.json"
+                "$ref": "./RegisterRequest.json"
               },
               "example": {
                 "username": "John doe",
@@ -64,7 +64,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./RegisterResponse.schema.json"
+                  "$ref": "./RegisterResponse.json"
                 },
                 "example": {
                   "user_id": "2kj3e9ps8uq934ph"
@@ -96,7 +96,7 @@
     "/auth/login": {
       "summary": "Operations related to user sign in",
       "post": {
-        "operationId": "LoginUser",
+        "operationId": "UserLogin",
         "tags": [
           "auth"
         ],
@@ -108,7 +108,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./LoginRequest.schema.json"
+                "$ref": "./LoginRequest.json"
               },
               "example": {
                 "email": "john@jdoe.net",
@@ -123,7 +123,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./LoginResponse.schema.json"
+                  "$ref": "./LoginResponse.json"
                 },
                 "example": {
                   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjJrajNlOXBzOHVxOTM0cGgifQ.n0_har5M6WYK5HmSsQarZbJp5A5dNrvKfbINA6eYEQs"
@@ -149,10 +149,10 @@
         }
       }
     },
-    "/auth/change": {
+    "/auth/password": {
       "summary": "Operations related to password change",
       "post": {
-        "operationId": "ChangePassword",
+        "operationId": "PasswordChange",
         "tags": [
           "auth"
         ],
@@ -169,7 +169,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./PasswordChange.schema.json"
+                "$ref": "./PasswordChange.json"
               },
               "example": {
                 "old": "iamjd0e",
@@ -219,7 +219,7 @@
         ],
         "summary": "fetch user details",
         "description": "Get the user information about the one requested in `uid`",
-        "operationId": "FetchUser",
+        "operationId": "UserFetch",
         "security": [
           {
             "token": []
@@ -227,7 +227,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/components/responses/FetchUser"
+            "$ref": "#/components/responses/UserFetch"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -252,7 +252,7 @@
         ],
         "summary": "fetch my user details",
         "description": "Get the user information about the currently logged in user.",
-        "operationId": "FetchMyself",
+        "operationId": "MyselfFetch",
         "security": [
           {
             "token": []
@@ -260,13 +260,16 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/components/responses/FetchUser"
+            "$ref": "#/components/responses/UserFetch"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       },
@@ -276,7 +279,7 @@
         ],
         "summary": "replace my user details",
         "description": "Replace the user record of the currently logged in user in the server with the following data.",
-        "operationId": "ReplaceMyself",
+        "operationId": "MyselfReplace",
         "security": [
           {
             "token": []
@@ -288,7 +291,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./ReplaceMyself.schema.json"
+                "$ref": "./MyselfReplace.json"
               },
               "example": {
                 "name": "Alex"
@@ -329,7 +332,7 @@
         ],
         "summary": "update my user details",
         "description": "Update the user information for the currently logged in user.",
-        "operationId": "UpdateMyself",
+        "operationId": "MyselfUpdate",
         "security": [
           {
             "token": []
@@ -341,7 +344,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./UpdateMyself.schema.json"
+                "$ref": "./MyselfUpdate.json"
               },
               "example": {
                 "name": "Alex"
@@ -370,6 +373,9 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       },
@@ -379,7 +385,7 @@
         ],
         "summary": "delete user details",
         "description": "Remove the user record from the server for the currently logged in user.",
-        "operationId": "RemoveMyself",
+        "operationId": "MyselfRemove",
         "security": [
           {
             "token": []
@@ -397,6 +403,9 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       }
@@ -404,12 +413,12 @@
   },
   "components": {
     "responses": {
-      "FetchUser": {
+      "UserFetch": {
         "description": "User details for the requested user id *uid*",
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "./FetchUser.schema.json"
+              "$ref": "./UserResponse.json"
             },
             "example": {
               "id": "zjkhbumnhp6v5eld",
@@ -427,6 +436,9 @@
       },
       "Unauthorized": {
         "description": "User is not authenticated, the resource is protected."
+      },
+      "Forbidden": {
+        "description": "Server understands the request and identifies the user but refuses to authorize it."
       },
       "NotFound": {
         "description": "Server cannot find the requested resource."

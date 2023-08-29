@@ -20,7 +20,7 @@ const BCryptCost = 12
 // RegisterRequest is the JSON request body format
 // at the `/auth/register` endpoint.
 type RegisterRequest struct {
-	// /docs/RegisterRequest.schema.json
+	// /docs/RegisterRequest.json
 	// Schema string `json:"$schema,omitempty"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -41,7 +41,7 @@ func (r RegisterRequest) Validate() error {
 // RegisterResponse is the JSON response format
 // at the `auth/register` endpoint.
 type RegisterResponse struct {
-	// `/docs/RegisterResponse.schema.json`
+	// `/docs/RegisterResponse.json`
 	Schema string `json:"$schema,omitempty"`
 	UserId string `json:"user_id"`
 }
@@ -49,7 +49,7 @@ type RegisterResponse struct {
 // LoginRequest is the JSON request body format
 // at the `/auth/login` endpoint.
 type LoginRequest struct {
-	// /docs/LoginRequest.schema.json
+	// /docs/LoginRequest.json
 	// Schema string `json:"$schema,omitempty"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -67,7 +67,7 @@ func (r LoginRequest) Validate() error {
 // LoginResponse is the JSON response body format
 // at the `/auth/login` endpoint.
 type LoginResponse struct {
-	// `/docs/LoginResponse.schema.json`
+	// `/docs/LoginResponse.json`
 	Schema string `json:"$schema,omitempty"`
 	Token  string `json:"token"`
 }
@@ -75,7 +75,7 @@ type LoginResponse struct {
 // PasswordChange is the JSON request body format
 // at the `/auth/change` endpoint.
 type PasswordChange struct {
-	// /docs/PasswordChange.schema.json
+	// /docs/PasswordChange.json
 	// Schema string `json:"$schema,omitempty"`
 	Old string `json:"old"`
 	New string `json:"new"`
@@ -153,7 +153,7 @@ func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	// json response
 	_ = json.NewEncoder(w).Encode(RegisterResponse{
-		Schema: path.Join("/docs/", "RegisterResponse.schema.json"),
+		Schema: path.Join("/docs/", "RegisterResponse.json"),
 		UserId: uid,
 	})
 }
@@ -202,7 +202,7 @@ func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(LoginResponse{
-		Schema: path.Join("/docs/", "LoginResponse.schema.json"),
+		Schema: path.Join("/docs/", "LoginResponse.json"),
 		Token:  string(token),
 	})
 }
