@@ -85,45 +85,22 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	query := listParams{
-		id:    r.Form.Get("id"),
-		email: r.Form.Get("email"),
-		name:  r.Form.Get("name"),
-		sort:  r.Form.Get("sort"),
-		order: r.Form.Get("order"),
-		size:  r.Form.Get("size"),
-		page:  r.Form.Get("page"),
-	}
-	// validation
-	if !userAllowedSort[query.sort] || !allowedOrder[query.order] {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	escaper := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	query.name = "%" + escaper.Replace(query.name) + "%"
-	filter := &db.UserFilter{
-		Uid:      query.id,
-		Email:    query.email,
-		Username: query.name,
-	}
-	size, page := PageSize, 0
-	// parse input data
-	if query.size != "" {
-		size, err = strconv.Atoi(query.size)
-	}
-	if query.page != "" {
-		page, err = strconv.Atoi(query.page)
-	}
+	query, err := ParseUserParams(r.Form)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	filter := &db.UserFilter{
+		Uid:      query.Id,
+		Email:    query.Email,
+		Username: query.Name,
+	}
 	projector := &db.Projector{
-		Sort: query.sort,
-		Desc: query.order == "dsc",
+		Sort: query.Sort,
+		Desc: query.Order == "dsc",
 		Paging: &db.Paging{
-			Limit:  size,
-			Offset: size * page,
+			Limit:  query.Size,
+			Offset: query.Size * query.Page,
 		},
 	}
 	// database call
@@ -144,7 +121,7 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 	}
 	// link header
 	if total > 0 {
-		header := res.linkHeader(r.URL.Query(), page, 0, total/size)
+		header := res.linkHeader(r.URL.Query(), query.Size, 0, total/query.Size)
 		w.Header().Set("Link", header)
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -175,9 +152,47 @@ func linkHeader(qs url.Values, rel string) string {
 	return fmt.Sprintf("<%s>; rel=%q", "/users?"+qs.Encode(), rel)
 }
 
-// listParams is used for parsing the query parameters for list handler.
-type listParams struct {
-	id, email, name string
-	sort, order     string
-	size, page      string
+// UserParams is used for parsing the query parameters for list handler.
+type UserParams struct {
+	Id, Email, Name string
+	Sort, Order     string
+	Size, Page      int
+}
+
+// ParseUserParams parses and validates the given query parameters
+// into UserParams that can be consumed by UserResource.list.
+func ParseUserParams(qs url.Values) (params UserParams, err error) {
+	// validate `name`
+	name := qs.Get("name")
+	escaper := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	name = "%" + escaper.Replace(name) + "%"
+	// validate `sort` and `order`
+	sort := qs.Get("sort")
+	order := qs.Get("order")
+	if !userAllowedSort[sort] || !allowedOrder[order] {
+		err = errors.New("api: invalid query parameter")
+		return
+	}
+	size, page := PageSize, 0
+	// parse `size` and `page`
+	qsize := qs.Get("size")
+	qpage := qs.Get("page")
+	if qsize != "" {
+		size, err = strconv.Atoi(qsize)
+	}
+	if qpage != "" {
+		page, err = strconv.Atoi(qpage)
+	}
+	if err != nil {
+		return
+	}
+	return UserParams{
+		Id:    qs.Get("id"),
+		Email: qs.Get("email"),
+		Name:  name,
+		Sort:  sort,
+		Order: order,
+		Size:  size,
+		Page:  page,
+	}, nil
 }
