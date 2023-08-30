@@ -186,6 +186,14 @@ func ParseUserParams(qs url.Values) (params UserParams, err error) {
 	if err != nil {
 		return
 	}
+	if size <= 0 || size > 50 {
+		err = errors.New("api: invalid query parameter")
+		return
+	}
+	if page < 0 {
+		err = errors.New("api: invalid query parameter")
+		return
+	}
 	return UserParams{
 		Id:    qs.Get("id"),
 		Email: qs.Get("email"),

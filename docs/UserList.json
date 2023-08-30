@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "title": "response body for list user",
+  "description": "The collection of users that satisfy specified filter constraints.",
+  "items": {
+    "$ref": "./UserResponse.json"
+  },
+  "examples": [
+    [
+      {
+        "id": "zjkhbumnhp6v5eld",
+        "email": "john@jdoe.net",
+        "name": "John Doe"
+      },
+      {
+        "id": "suhiqfwm6br3ow7c",
+        "email": "alex@example.net",
+        "name": "alex"
+      }
+    ],
+    []
+  ]
+}

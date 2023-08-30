@@ -206,6 +206,110 @@
         }
       }
     },
+    "/users": {
+      "summary": "operations related to users collection",
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "list all matching users",
+        "description": "Get a list of all users filtered by requested fields",
+        "operationId": "UserList",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "unique id of the user (exact match)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "2btj7xhkjvecvap6"
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "description": "email id of the user (exact match)",
+            "schema": {
+              "type": "string",
+              "format": "email"
+            },
+            "example": "alice@example.net"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "username of the user (approx match) *case insensitive*",
+            "schema": {
+              "type": "string"
+            },
+            "example": "alex"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "*sort* defines the field on which entries are sorted. Default: 'id'",
+            "schema": {
+              "enum": [
+                "id",
+                "username",
+                "email"
+              ]
+            },
+            "example": "id"
+          },
+          {
+            "$ref": "#/components/parameters/order"
+          },
+          {
+            "$ref": "#/components/parameters/size"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "list of user records that satisfy the requested filters",
+            "headers": {
+              "link": {
+                "$ref": "#/components/headers/link"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./UserList.json"
+                },
+                "example": [
+                  {
+                    "id": "zjkhbumnhp6v5eld",
+                    "email": "john@jdoe.net",
+                    "name": "John Doe"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultResponse"
+          }
+        }
+      }
+    },
     "/users/{uid}": {
       "summary": "Operations related to information on a particular user",
       "parameters": [
@@ -467,6 +571,48 @@
           "description": "user id of the requested user"
         },
         "example": "536j5khg64jh632i"
+      },
+      "order": {
+        "name": "order",
+        "in": "query",
+        "description": "*order* defines the sorting order of the entries (ascending or descending). Default: 'asc'",
+        "schema": {
+          "enum": [
+            "asc",
+            "dsc"
+          ]
+        },
+        "example": "asc"
+      },
+      "size": {
+        "name": "size",
+        "in": "query",
+        "description": "*size* defines the maximum entries per page (or page size).",
+        "schema": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50,
+          "example": 20
+        }
+      },
+      "page": {
+        "name": "page",
+        "in": "query",
+        "description": "*page* is used for requesting a specific page for pagination.",
+        "schema": {
+          "type": "number",
+          "minimum": 0,
+          "example": 3
+        }
+      }
+    },
+    "headers": {
+      "link": {
+        "description": "Link header specifies urls related to the resource sent in the response.\n\nFormat: `Link: <{url}>; {param}={value}`",
+        "schema": {
+          "type": "string"
+        },
+        "example": "<http://example.com/TheBook/chapter2>; rel=\"previous\"; title=\"previous chapter\""
       }
     },
     "securitySchemes": {
