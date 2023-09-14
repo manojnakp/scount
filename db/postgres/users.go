@@ -7,8 +7,7 @@ import (
 	"errors"
 	"html/template"
 	"log"
-
-	"golang.org/x/exp/slices"
+	"slices"
 
 	"github.com/manojnakp/scount/db"
 )
