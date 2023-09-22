@@ -212,7 +212,7 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(BodyKey).(PasswordChange) // BodyParser
 	id := r.Context().Value(AuthUserKey).(string)       // Authware
 	// fetch user details
-	user, err := res.DB.Users.FindOne(r.Context(), id)
+	user, err := res.DB.Users.FindOne(r.Context(), &db.UserId{Uid: id})
 	if err != nil {
 		log.Println(err)
 	}
@@ -254,11 +254,14 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 	}
 	// base64(hash)
 	password := base64.StdEncoding.EncodeToString(buf)
-	// update database where `oldpassword = old, id = uid`
-	err = res.DB.Users.Update(
+	// update database where `old_password = old, id = uid`
+	err = res.DB.Users.UpdatePassword(
 		r.Context(),
-		&db.UserFilter{Uid: user.Uid, Password: user.Password},
-		&db.UserUpdater{Password: password},
+		&db.PasswordUpdater{
+			Old: user.Password,
+			New: password,
+			Uid: user.Uid,
+		},
 	)
 	if err != nil {
 		log.Println(err)

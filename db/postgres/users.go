@@ -5,11 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/manojnakp/scount/db"
 	"html/template"
 	"log"
-	"slices"
-
-	"github.com/manojnakp/scount/db"
 )
 
 // UserInsertQuery is query statement for inserting single user.
@@ -33,43 +31,41 @@ SELECT uid, email, username, password
 FROM users
 WHERE email = $1;`
 
+// UserPasswordQuery is a query statement for updating password of the user.
+const UserPasswordQuery = `
+UPDATE users
+SET password = $1
+WHERE uid = $2 AND password = $3;`
+
 // UserUpdateTemplate is a query template for updating users from UserCollection.
 var UserUpdateTemplate = template.Must(template.New("user-update").
-	Funcs(template.FuncMap{
-		"add": func(x, y int) int { return x + y },
-	}).
+	Funcs(template.FuncMap{"add": Add}).
 	Parse(`
 UPDATE users SET
 {{ range $i, $col := . }}
-	{{ $col }} = {{ add $i 9 | printf "$%d" }}
+	{{ $col }} = {{ add $i 2 | printf "$%d" }}
 {{ end }}
-WHERE ($1 OR uid = $2)
-AND ($3 OR email = $4)
-AND ($5 OR username ILIKE $6)
-AND ($7 OR password = $8);
+WHERE uid = $1;
 `))
 
 // UserSelectTemplate is a query template for finding users from UserCollection.
 var UserSelectTemplate = template.Must(template.New("user-select").
+	Funcs(template.FuncMap{"join": JoinSorter}).
 	Parse(`
-{{ $sort := "uid" }}
-{{ if .Sort }} {{ $sort = .Sort }} {{ end }}
 SELECT uid, email, username, password,
 count(uid) OVER () AS total
 FROM users
 WHERE ($1 OR uid = $2)
 AND ($3 OR email = $4)
 AND ($5 OR username ILIKE $6)
-AND ($7 OR password = $8)
-ORDER BY {{ $sort }} {{ if .Desc }} DESC {{ end }}
+ORDER BY {{ join .Order "uid" }}
 {{ with .Paging }}
 	LIMIT {{ .Limit }}
 	OFFSET {{ .Offset }}
 {{ end }};
 `))
 
-// UserCollection provides a convenient way to interact
-// with `users` table.
+// UserCollection provides a convenient way to interact with `users` table.
 type UserCollection struct {
 	DB *sql.DB // underlying database handle
 }
@@ -110,8 +106,11 @@ func (colln UserCollection) Insert(ctx context.Context, users ...db.User) error 
 }
 
 // DeleteOne removes exactly 1 user from `users` collection based on id.
-func (colln UserCollection) DeleteOne(ctx context.Context, id string) error {
-	res, err := colln.DB.ExecContext(ctx, UserDeleteQuery, id)
+func (colln UserCollection) DeleteOne(ctx context.Context, id *db.UserId) error {
+	if id == nil {
+		return db.ErrNil
+	}
+	res, err := colln.DB.ExecContext(ctx, UserDeleteQuery, id.Uid)
 	if err != nil {
 		return Error(err)
 	}
@@ -125,14 +124,43 @@ func (colln UserCollection) DeleteOne(ctx context.Context, id string) error {
 	return nil
 }
 
-// Update modifies users from `users` collection.
-func (colln UserCollection) Update(
+// UpdatePassword modifies the password of the matching user record as specified.
+func (colln UserCollection) UpdatePassword(ctx context.Context, updater *db.PasswordUpdater) error {
+	if updater == nil {
+		return db.ErrNil
+	}
+	res, err := colln.DB.ExecContext(
+		ctx, UserPasswordQuery,
+		updater.New, updater.Uid, updater.Old,
+	)
+	if err != nil {
+		return Error(err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return db.ErrNoRows
+	}
+	return nil
+}
+
+// UpdateOne modifies users from `users` collection.
+func (colln UserCollection) UpdateOne(
 	ctx context.Context,
-	filter *db.UserFilter,
+	id *db.UserId,
 	setter *db.UserUpdater,
 ) error {
+	// pointer validity check
+	if id == nil {
+		return db.ErrNil
+	}
+	if setter == nil {
+		setter = new(db.UserUpdater)
+	}
 	// construct query from template
-	query, args, err := colln.buildUpdateQuery(filter, setter)
+	query, args, err := colln.buildUpdateQuery(id, setter)
 	if err != nil {
 		return err
 	}
@@ -153,39 +181,19 @@ func (colln UserCollection) Update(
 	return nil
 }
 
-// buildArgs constructs query arguments using provided filter.
-func (colln UserCollection) buildArgs(filter *db.UserFilter) []any {
-	if filter == nil {
-		filter = new(db.UserFilter)
-	}
-	args := make([]any, 0)
-	// WHERE clause
-	args = append(args, filter.Uid == "", filter.Uid)
-	args = append(args, filter.Email == "", filter.Email)
-	args = append(args, filter.Username == "", filter.Username)
-	args = append(args, filter.Password == "", filter.Password)
-	return args
-}
-
 // buildUpdateQuery constructs user update query using provided filter,
-// setter and UserUpdateTemplate.
+// setter and UserUpdateTemplate. id and setter not nil.
 func (colln UserCollection) buildUpdateQuery(
-	filter *db.UserFilter,
+	id *db.UserId,
 	setter *db.UserUpdater,
 ) (string, []any, error) {
-	if setter == nil {
-		setter = new(db.UserUpdater)
-	}
-	args := colln.buildArgs(filter)
+	// dollar arguments in the SQL query
+	args := []any{id.Uid}
 	// cols for template arguments
 	cols := make([]string, 0)
 	if setter.Username != "" {
 		cols = append(cols, "username")
 		args = append(args, setter.Username)
-	}
-	if setter.Password != "" {
-		cols = append(cols, "password")
-		args = append(args, setter.Password)
 	}
 	// construct
 	buf := new(bytes.Buffer)
@@ -198,9 +206,13 @@ func (colln UserCollection) buildUpdateQuery(
 }
 
 // FindOne fetches user from colln by id.
-func (colln UserCollection) FindOne(ctx context.Context, id string) (u db.User, err error) {
+func (colln UserCollection) FindOne(ctx context.Context, id *db.UserId) (u db.User, err error) {
+	if id == nil {
+		err = db.ErrNil
+		return
+	}
 	var user db.User
-	err = colln.DB.QueryRowContext(ctx, UserSelectQuery, id).
+	err = colln.DB.QueryRowContext(ctx, UserSelectQuery, id.Uid).
 		Scan(&user.Uid, &user.Email, &user.Username, &user.Password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -267,12 +279,14 @@ func (colln UserCollection) buildSelectQuery(
 	filter *db.UserFilter,
 	projector *db.Projector,
 ) (string, []any, error) {
+	// pointer validity check
+	if filter == nil {
+		filter = new(db.UserFilter)
+	}
 	if projector == nil {
 		projector = new(db.Projector)
 	}
-	if !slices.Contains(db.UserAllowedCols, projector.Sort) {
-		return "", nil, db.ErrInvalidColumn
-	}
+	// TODO: projector.Order[i] NOT IN db.UserAllowedCols -> db.ErrInvalidColumn
 	args := colln.buildArgs(filter)
 	// construct
 	buf := new(bytes.Buffer)
@@ -283,3 +297,20 @@ func (colln UserCollection) buildSelectQuery(
 	}
 	return buf.String(), args, nil
 }
+
+// buildArgs constructs query arguments using provided filter. filter is not nil.
+func (colln UserCollection) buildArgs(filter *db.UserFilter) []any {
+	args := make([]any, 0)
+	// WHERE clause
+	args = append(args, filter.Uid == "", filter.Uid)
+	args = append(args, filter.Email == "", filter.Email)
+	args = append(args, filter.Username == "", filter.Username)
+	return args
+}
+
+// compile-time assertion
+var _ interface {
+	db.Collection[db.User, db.UserFilter, db.UserUpdater, db.UserId]
+	FindByEmail(ctx context.Context, email string) (db.User, error)
+	UpdatePassword(ctx context.Context, updater *db.PasswordUpdater) error
+} = UserCollection{}
