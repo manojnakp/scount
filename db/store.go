@@ -12,6 +12,7 @@ var (
 	ErrSyntaxPrivilege = errors.New("db: syntax error or insufficient privilege")
 	ErrInvalidData     = errors.New("db: invalid data for database operation")
 	ErrNil             = errors.New("db: nil pointer")
+	ErrEncoding        = errors.New("db: invalid data encoding")
 	ErrInvalidColumn   = errors.New("db: invalid or non-permissible column")
 )
 

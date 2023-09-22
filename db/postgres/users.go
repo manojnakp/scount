@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"github.com/manojnakp/scount/db"
+	"github.com/manojnakp/scount/db/internal"
 	"html/template"
 	"log"
 )
@@ -34,8 +36,8 @@ WHERE email = $1;`
 // UserPasswordQuery is a query statement for updating password of the user.
 const UserPasswordQuery = `
 UPDATE users
-SET password = $1
-WHERE uid = $2 AND password = $3;`
+SET password = $2
+WHERE uid = $1 AND password = $3;`
 
 // UserUpdateTemplate is a query template for updating users from UserCollection.
 var UserUpdateTemplate = template.Must(template.New("user-update").
@@ -86,7 +88,8 @@ func (colln UserCollection) Insert(ctx context.Context, users ...db.User) error 
 		defer stmt.Close()
 		// insert every user
 		for _, u := range users {
-			res, err := stmt.ExecContext(ctx, u.Uid, u.Email, u.Username, u.Password)
+			password := base64.StdEncoding.EncodeToString(u.Password)
+			res, err := stmt.ExecContext(ctx, u.Uid, u.Email, u.Username, password)
 			if err != nil {
 				return zero, Error(err)
 			}
@@ -130,8 +133,9 @@ func (colln UserCollection) UpdatePassword(ctx context.Context, updater *db.Pass
 		return db.ErrNil
 	}
 	res, err := colln.DB.ExecContext(
-		ctx, UserPasswordQuery,
-		updater.New, updater.Uid, updater.Old,
+		ctx, UserPasswordQuery, updater.Uid,
+		base64.StdEncoding.EncodeToString(updater.New),
+		base64.StdEncoding.EncodeToString(updater.Old),
 	)
 	if err != nil {
 		return Error(err)
@@ -212,12 +216,18 @@ func (colln UserCollection) FindOne(ctx context.Context, id *db.UserId) (u db.Us
 		return
 	}
 	var user db.User
+	var password string
 	err = colln.DB.QueryRowContext(ctx, UserSelectQuery, id.Uid).
-		Scan(&user.Uid, &user.Email, &user.Username, &user.Password)
+		Scan(&user.Uid, &user.Email, &user.Username, &password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = db.ErrNoRows
 		}
+		return
+	}
+	user.Password, err = base64.StdEncoding.DecodeString(password)
+	if err != nil {
+		err = internal.Error{Pretty: db.ErrEncoding, Err: err}
 		return
 	}
 	return user, nil
@@ -226,12 +236,18 @@ func (colln UserCollection) FindOne(ctx context.Context, id *db.UserId) (u db.Us
 // FindByEmail fetches user from colln by email.
 func (colln UserCollection) FindByEmail(ctx context.Context, email string) (u db.User, err error) {
 	var user db.User
+	var password string
 	err = colln.DB.QueryRowContext(ctx, UserByEmailQuery, email).
-		Scan(&user.Uid, &user.Email, &user.Username, &user.Password)
+		Scan(&user.Uid, &user.Email, &user.Username, &password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = db.ErrNoRows
 		}
+		return
+	}
+	user.Password, err = base64.StdEncoding.DecodeString(password)
+	if err != nil {
+		err = internal.Error{Pretty: db.ErrEncoding, Err: err}
 		return
 	}
 	return user, nil
@@ -244,6 +260,13 @@ func (colln UserCollection) Find(
 	filter *db.UserFilter,
 	projector *db.Projector,
 ) (list db.List[db.User], err error) {
+	// pointer validity check
+	if filter == nil {
+		filter = new(db.UserFilter)
+	}
+	if projector == nil {
+		projector = new(db.Projector)
+	}
 	// construct query from template
 	query, args, err := colln.buildSelectQuery(filter, projector)
 	if err != nil {
@@ -261,8 +284,14 @@ func (colln UserCollection) Find(
 	// scan through the rows
 	for rows.Next() {
 		var u db.User
-		err = rows.Scan(&u.Uid, &u.Email, &u.Username, &u.Password, &total)
+		var password string
+		err = rows.Scan(&u.Uid, &u.Email, &u.Username, &password, &total)
 		if err != nil {
+			return
+		}
+		u.Password, err = base64.StdEncoding.DecodeString(password)
+		if err != nil {
+			err = internal.Error{Pretty: db.ErrEncoding, Err: err}
 			return
 		}
 		users = append(users, u)
@@ -279,13 +308,6 @@ func (colln UserCollection) buildSelectQuery(
 	filter *db.UserFilter,
 	projector *db.Projector,
 ) (string, []any, error) {
-	// pointer validity check
-	if filter == nil {
-		filter = new(db.UserFilter)
-	}
-	if projector == nil {
-		projector = new(db.Projector)
-	}
 	// TODO: projector.Order[i] NOT IN db.UserAllowedCols -> db.ErrInvalidColumn
 	args := colln.buildArgs(filter)
 	// construct

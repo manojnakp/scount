@@ -5,10 +5,10 @@ type User struct {
 	Uid      string // id
 	Email    string // unique
 	Username string
-	Password string
+	Password []byte
 }
 
-// UserId is the 'Id' type for user collection. Uid is primary key or
+// UserId is the 'id' type for user collection. Uid is primary key or
 // object identifier in the database.
 type UserId struct {
 	Uid string
@@ -24,8 +24,8 @@ type UserFilter struct {
 // PasswordUpdater provides fields necessary for update
 // password operation for a user record.
 type PasswordUpdater struct {
-	Old string
-	New string
+	Old []byte
+	New []byte
 	Uid string
 }
 
