@@ -5,9 +5,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/manojnakp/scount/db"
 	"log"
 	"text/template"
+
+	"github.com/manojnakp/scount/db"
 )
 
 // ScountDeleteQuery is a query statement for deleting a single scount by sid.

@@ -6,10 +6,11 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
-	"github.com/manojnakp/scount/db"
-	"github.com/manojnakp/scount/db/internal"
 	"html/template"
 	"log"
+
+	"github.com/manojnakp/scount/db"
+	"github.com/manojnakp/scount/db/internal"
 )
 
 // UserInsertQuery is query statement for inserting single user.
@@ -55,7 +56,7 @@ var UserSelectTemplate = template.Must(template.New("user-select").
 	Funcs(template.FuncMap{"join": JoinSorter}).
 	Parse(`
 SELECT uid, email, username, password,
-count(uid) OVER () AS total
+count(*) OVER () AS total
 FROM users
 WHERE ($1 OR uid = $2)
 AND ($3 OR email = $4)
@@ -72,7 +73,7 @@ type UserCollection struct {
 	DB *sql.DB // underlying database handle
 }
 
-// Insert adds one or more users to colln. Does nothing if no users to insert.
+// Insert adds one or more users to colln. db.ErrNoRows if no users to insert.
 func (colln UserCollection) Insert(ctx context.Context, users ...db.User) error {
 	if len(users) == 0 {
 		return db.ErrNoRows
@@ -309,7 +310,11 @@ func (colln UserCollection) buildSelectQuery(
 	projector *db.Projector,
 ) (string, []any, error) {
 	// TODO: projector.Order[i] NOT IN db.UserAllowedCols -> db.ErrInvalidColumn
-	args := colln.buildArgs(filter)
+	args := make([]any, 0)
+	// WHERE clause
+	args = append(args, filter.Uid == "", filter.Uid)
+	args = append(args, filter.Email == "", filter.Email)
+	args = append(args, filter.Username == "", filter.Username)
 	// construct
 	buf := new(bytes.Buffer)
 	err := UserSelectTemplate.Execute(buf, projector)
@@ -318,16 +323,6 @@ func (colln UserCollection) buildSelectQuery(
 		return "", nil, err
 	}
 	return buf.String(), args, nil
-}
-
-// buildArgs constructs query arguments using provided filter. filter is not nil.
-func (colln UserCollection) buildArgs(filter *db.UserFilter) []any {
-	args := make([]any, 0)
-	// WHERE clause
-	args = append(args, filter.Uid == "", filter.Uid)
-	args = append(args, filter.Email == "", filter.Email)
-	args = append(args, filter.Username == "", filter.Username)
-	return args
 }
 
 // compile-time assertion

@@ -35,5 +35,4 @@ type UserUpdater struct {
 }
 
 // UserAllowedCols is a list of columns allowed for sorting.
-// Empty string stands for default (uid in this case).
-var UserAllowedCols = []Column{"", "uid", "email", "username"}
+var UserAllowedCols = []Column{"uid", "email", "username"}

@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/manojnakp/scount/db"
-	"github.com/manojnakp/scount/db/internal"
 	"log"
 	"strings"
+
+	"github.com/manojnakp/scount/db"
+	"github.com/manojnakp/scount/db/internal"
 
 	"github.com/lib/pq"
 )
