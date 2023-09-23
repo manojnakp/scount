@@ -37,7 +37,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./RegisterRequest.json"
+                "$ref": "./schema/RegisterRequest.json"
               },
               "example": {
                 "username": "John doe",
@@ -64,7 +64,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./RegisterResponse.json"
+                  "$ref": "./schema/RegisterResponse.json"
                 },
                 "example": {
                   "user_id": "2kj3e9ps8uq934ph"
@@ -108,7 +108,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./LoginRequest.json"
+                "$ref": "./schema/LoginRequest.json"
               },
               "example": {
                 "email": "john@jdoe.net",
@@ -123,7 +123,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./LoginResponse.json"
+                  "$ref": "./schema/LoginResponse.json"
                 },
                 "example": {
                   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjEyNTc4OTc2MDAsInN1YiI6IjJrajNlOXBzOHVxOTM0cGgifQ.n0_har5M6WYK5HmSsQarZbJp5A5dNrvKfbINA6eYEQs"
@@ -169,7 +169,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./PasswordChange.json"
+                "$ref": "./schema/PasswordChange.json"
               },
               "example": {
                 "old": "iamjd0e",
@@ -283,7 +283,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./UserList.json"
+                  "$ref": "./schema/UserList.json"
                 },
                 "example": [
                   {
@@ -395,7 +395,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./MyselfReplace.json"
+                "$ref": "./schema/MyselfReplace.json"
               },
               "example": {
                 "name": "Alex"
@@ -448,7 +448,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./MyselfUpdate.json"
+                "$ref": "./schema/MyselfUpdate.json"
               },
               "example": {
                 "name": "Alex"
@@ -522,7 +522,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "./UserResponse.json"
+              "$ref": "./schema/UserResponse.json"
             },
             "example": {
               "id": "zjkhbumnhp6v5eld",

@@ -27,8 +27,7 @@ func main() {
 		log.Fatal(err)
 	}
 	r := chi.NewRouter()
-	r.Mount("/docs/", DocHandler{}.Router())
-	r.Handle("/docs", http.RedirectHandler("/docs/", http.StatusMovedPermanently))
+	r.Mount("/", DocHandler{}.Router())
 	r.Mount("/auth", api.AuthResource{DB: store}.Router())
 	r.Mount("/users", api.UserResource{DB: store}.Router())
 	r.Handle("/users/", http.RedirectHandler("/users", http.StatusMovedPermanently))

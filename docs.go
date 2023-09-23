@@ -26,13 +26,16 @@ type DocHandler struct{}
 func (d DocHandler) Router() chi.Router {
 	r := chi.NewRouter()
 	// serve json files like 'openapi.json'
-	r.Get("/{file}", func(w http.ResponseWriter, r *http.Request) {
-		filename := chi.URLParamFromCtx(r.Context(), "file")
-		d.ServeFile(w, r, filename)
+	r.Get("/schema/*", func(w http.ResponseWriter, r *http.Request) {
+		filename := chi.URLParamFromCtx(r.Context(), "*")
+		d.ServeFile(w, r, path.Join("schema", filename))
 	})
-	r.Handle("/index.html", http.RedirectHandler("/docs/", http.StatusMovedPermanently))
+	r.Handle("/docs/", http.RedirectHandler("/docs.html", http.StatusMovedPermanently))
+	r.Get("/openapi.json", func(w http.ResponseWriter, r *http.Request) {
+		d.ServeFile(w, r, "openapi.json")
+	})
 	// serve html docs
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/docs.html", func(w http.ResponseWriter, r *http.Request) {
 		d.ServeFile(w, r, "index.html")
 	})
 	return r
@@ -45,7 +48,7 @@ func (d DocHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeFile is a utility method for streaming a file from `/docs`.
 func (d DocHandler) ServeFile(w http.ResponseWriter, _ *http.Request, filename string) {
-	file, err := filesystem.Open(path.Join("docs", "static", filename))
+	file, err := filesystem.Open(path.Join("docs/static", filename))
 	if err != nil {
 		log.Println(err)
 		// all these known errors to be treated as '404: Not Found'
