@@ -11,6 +11,18 @@ export default defineConfig({
 				github: 'https://github.com/manojnakp/scount',
 			},
 			sidebar: [
+				{
+					label: 'Getting Started',
+					autogenerate: { directory: 'intro' },
+				},
+				{
+					label: 'Design',
+					autogenerate: { directory: 'design' },
+				},
+				{
+					label: 'API Reference',
+					link: '/ref/',
+				},
 			],
 			lastUpdated: true,
 			editLink: {
