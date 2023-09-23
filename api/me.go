@@ -63,7 +63,7 @@ func (res MyselfResource) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // fetch handles GET method on `/me` route.
 func (res MyselfResource) fetch(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(AuthUserKey).(string)
-	user, err := res.DB.Users.FindOne(r.Context(), id)
+	user, err := res.DB.Users.FindOne(r.Context(), &db.UserId{Uid: id})
 	switch {
 	case errors.Is(err, db.ErrNoRows):
 		w.WriteHeader(http.StatusUnauthorized)
@@ -75,16 +75,16 @@ func (res MyselfResource) fetch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(UserInfo{
 		Schema: "/docs/UserResponse.json",
-		Id:    user.Uid,
-		Email: user.Email,
-		Name:  user.Username,
+		Id:     user.Uid,
+		Email:  user.Email,
+		Name:   user.Username,
 	})
 }
 
 // delete handles DELETE method on `/me` route.
 func (res MyselfResource) delete(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(AuthUserKey).(string)
-	err := res.DB.Users.DeleteOne(r.Context(), id)
+	err := res.DB.Users.DeleteOne(r.Context(), &db.UserId{Uid: id})
 	switch {
 	case errors.Is(err, db.ErrNoRows):
 	// also considered success
@@ -108,11 +108,8 @@ func (res MyselfResource) update(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	filter := &db.UserFilter{
-		Uid: id,
-	}
 	// database call
-	err := res.DB.Users.Update(r.Context(), filter, &db.UserUpdater{
+	err := res.DB.Users.UpdateOne(r.Context(), &db.UserId{Uid: id}, &db.UserUpdater{
 		Username: updater.Username,
 	})
 	switch {
@@ -132,10 +129,9 @@ func (res MyselfResource) update(w http.ResponseWriter, r *http.Request) {
 func (res MyselfResource) replace(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(AuthUserKey).(string)
 	replacer := r.Context().Value(BodyKey).(MyselfReplacer)
-	filter := &db.UserFilter{Uid: id}
 	updater := &db.UserUpdater{Username: replacer.Username}
 	// database call
-	err := res.DB.Users.Update(r.Context(), filter, updater)
+	err := res.DB.Users.UpdateOne(r.Context(), &db.UserId{Uid: id}, updater)
 	switch {
 	case errors.Is(err, db.ErrNoRows): // nothing to update
 		// also considered as success

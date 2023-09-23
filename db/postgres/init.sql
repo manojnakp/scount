@@ -1,6 +1,9 @@
-CREATE TABLE IF NOT EXISTS users (
-    uid TEXT PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
+CREATE TABLE IF NOT EXISTS users
+(
+    uid      TEXT NOT NULL,
+    email    TEXT NOT NULL,
     username TEXT NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    PRIMARY KEY (uid),
+    UNIQUE (email)
 );

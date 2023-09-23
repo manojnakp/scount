@@ -14,15 +14,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// userAllowedSort is the set of allowed values for *sort* query parameter for user resource queries.
-var userAllowedSort = map[string]bool{
-	"id": true, "email": true,
-	"username": true, "": true,
-}
-
-// allowedOrder is the set of allowed sort order values.
-var allowedOrder = map[string]bool{
-	"asc": true, "dsc": true, "": true,
+// userSortMap maps allowed values of *sort* query parameter to
+// corresponding columns for user resource queries.
+var userSortMap = map[string]db.Column{
+	"":      "uid",
+	"id":    "uid",
+	"email": "email",
+	"name":  "username",
 }
 
 // PageSize is the default number of items limit to a page.
@@ -59,8 +57,8 @@ func (res UserResource) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // fetch handles requests at `/users/{uid}`.
 func (res UserResource) fetch(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "uid")                       // url parameter
-	user, err := res.DB.Users.FindOne(r.Context(), id) // database call
+	id := chi.URLParam(r, "uid") // url parameter
+	user, err := res.DB.Users.FindOne(r.Context(), &db.UserId{Uid: id})
 	switch {
 	case errors.Is(err, db.ErrNoRows): // uid not exist
 		w.WriteHeader(http.StatusNotFound)
@@ -96,8 +94,7 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 		Username: query.Name,
 	}
 	projector := &db.Projector{
-		Sort: query.Sort,
-		Desc: query.Order == "dsc",
+		Order: query.Sort,
 		Paging: &db.Paging{
 			Limit:  query.Size,
 			Offset: query.Size * query.Page,
@@ -155,7 +152,7 @@ func linkHeader(qs url.Values, rel string) string {
 // UserParams is used for parsing the query parameters for list handler.
 type UserParams struct {
 	Id, Email, Name string
-	Sort, Order     string
+	Sort            []db.Sorter
 	Size, Page      int
 }
 
@@ -166,11 +163,9 @@ func ParseUserParams(qs url.Values) (params UserParams, err error) {
 	name := qs.Get("name")
 	escaper := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 	name = "%" + escaper.Replace(name) + "%"
-	// validate `sort` and `order`
-	sort := qs.Get("sort")
-	order := qs.Get("order")
-	if !userAllowedSort[sort] || !allowedOrder[order] {
-		err = errors.New("api: invalid query parameter")
+	// parse `sort`
+	sort, err := ParseSortOrder(qs["sort"], userSortMap)
+	if err != nil {
 		return
 	}
 	size, page := PageSize, 0
@@ -199,8 +194,25 @@ func ParseUserParams(qs url.Values) (params UserParams, err error) {
 		Email: qs.Get("email"),
 		Name:  name,
 		Sort:  sort,
-		Order: order,
 		Size:  size,
 		Page:  page,
 	}, nil
+}
+
+// ParseSortOrder parses `sort` query parameter and returns list of sorting order
+// on database columns.
+func ParseSortOrder(values []string, columns map[string]db.Column) ([]db.Sorter, error) {
+	ans := make([]db.Sorter, 0, len(values))
+	for _, query := range values {
+		qs, desc := strings.CutSuffix(query, "~")
+		col, ok := columns[qs]
+		if !ok {
+			return nil, errors.New("api: invalid query parameter")
+		}
+		ans = append(ans, db.Sorter{
+			Column: col,
+			Desc:   desc,
+		})
+	}
+	return ans, nil
 }

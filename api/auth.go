@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"log"
@@ -117,13 +116,12 @@ func (res AuthResource) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(BodyKey).(RegisterRequest)
 	uid := GenerateID()
-	buf, err := bcrypt.GenerateFromPassword([]byte(body.Password), BCryptCost)
+	password, err := bcrypt.GenerateFromPassword([]byte(body.Password), BCryptCost)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
-	password := base64.StdEncoding.EncodeToString(buf)
 	// insert into db
 	err = res.DB.Users.Insert(r.Context(), db.User{
 		Uid:      uid,
@@ -173,13 +171,7 @@ func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	buf, err := base64.StdEncoding.DecodeString(user.Password)
-	if err != nil { // failed
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
-	err = bcrypt.CompareHashAndPassword(buf, []byte(body.Password))
+	err = bcrypt.CompareHashAndPassword(user.Password, []byte(body.Password))
 	if err != nil {
 		log.Println(err)
 	}
@@ -212,7 +204,7 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(BodyKey).(PasswordChange) // BodyParser
 	id := r.Context().Value(AuthUserKey).(string)       // Authware
 	// fetch user details
-	user, err := res.DB.Users.FindOne(r.Context(), id)
+	user, err := res.DB.Users.FindOne(r.Context(), &db.UserId{Uid: id})
 	if err != nil {
 		log.Println(err)
 	}
@@ -225,14 +217,8 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	buf, err := base64.StdEncoding.DecodeString(user.Password)
-	if err != nil { // failed to base64 decode
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
 	// check if old password is valid
-	err = bcrypt.CompareHashAndPassword(buf, []byte(body.Old))
+	err = bcrypt.CompareHashAndPassword(user.Password, []byte(body.Old))
 	if err != nil {
 		log.Println(err)
 	}
@@ -246,19 +232,20 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// ok, now generate hash for new password
-	buf, err = bcrypt.GenerateFromPassword([]byte(body.New), BCryptCost)
+	password, err := bcrypt.GenerateFromPassword([]byte(body.New), BCryptCost)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
-	// base64(hash)
-	password := base64.StdEncoding.EncodeToString(buf)
-	// update database where `oldpassword = old, id = uid`
-	err = res.DB.Users.Update(
+	// update database where `old_password = old, id = uid`
+	err = res.DB.Users.UpdatePassword(
 		r.Context(),
-		&db.UserFilter{Uid: user.Uid, Password: user.Password},
-		&db.UserUpdater{Password: password},
+		&db.PasswordUpdater{
+			Old: user.Password,
+			New: password,
+			Uid: user.Uid,
+		},
 	)
 	if err != nil {
 		log.Println(err)

@@ -13,10 +13,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// filesystem embedding `./docs` contains json files (mostly schema defintions),
+// filesystem embedding `./docs/static` contains json files (mostly schema definitions),
 // OpenAPI spec and API documentation as `index.html` file.
 //
-//go:embed docs
+//go:embed docs/static
 var filesystem embed.FS
 
 // DocHandler serves documentation resources.
@@ -45,7 +45,7 @@ func (d DocHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeFile is a utility method for streaming a file from `/docs`.
 func (d DocHandler) ServeFile(w http.ResponseWriter, _ *http.Request, filename string) {
-	file, err := filesystem.Open(path.Join("docs", filename))
+	file, err := filesystem.Open(path.Join("docs", "static", filename))
 	if err != nil {
 		log.Println(err)
 		// all these known errors to be treated as '404: Not Found'

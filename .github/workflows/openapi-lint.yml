@@ -20,4 +20,4 @@ jobs:
             - name: Install vacuum
               run: go install github.com/daveshanley/vacuum@latest
             - name: Lint openapi definition file
-              run: vacuum lint -dqs -p docs docs/openapi.json
+              run: vacuum lint -dqs -p docs/static docs/static/openapi.json
