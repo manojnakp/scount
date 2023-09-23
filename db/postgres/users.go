@@ -150,7 +150,7 @@ func (colln UserCollection) UpdatePassword(ctx context.Context, updater *db.Pass
 	return nil
 }
 
-// UpdateOne modifies users from `users` collection.
+// UpdateOne modifies exactly 1 user from `users` collection.
 func (colln UserCollection) UpdateOne(
 	ctx context.Context,
 	id *db.UserId,
@@ -185,7 +185,7 @@ func (colln UserCollection) UpdateOne(
 	return nil
 }
 
-// buildUpdateQuery constructs user update query using provided filter,
+// buildUpdateQuery constructs user update query using provided id,
 // setter and UserUpdateTemplate. id and setter not nil.
 func (colln UserCollection) buildUpdateQuery(
 	id *db.UserId,

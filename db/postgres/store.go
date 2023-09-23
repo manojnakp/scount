@@ -16,7 +16,8 @@ import (
 // database connection handle.
 func NewStore(DB *sql.DB) *db.Store {
 	return &db.Store{
-		Users: UserCollection{DB},
+		Users:   UserCollection{DB},
+		Scounts: ScountCollection{DB},
 	}
 }
 

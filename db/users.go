@@ -29,7 +29,7 @@ type PasswordUpdater struct {
 	Uid string
 }
 
-// UserUpdater provides Fields for updating users.
+// UserUpdater provides fields for updating users.
 type UserUpdater struct {
 	Username string
 }

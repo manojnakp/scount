@@ -23,6 +23,11 @@ type Store struct {
 		FindByEmail(ctx context.Context, email string) (User, error)
 		UpdatePassword(context.Context, *PasswordUpdater) error
 	}
+	Scounts interface {
+		DeleteOne(ctx context.Context, id *ScountId) error
+		UpdateOne(ctx context.Context, id *ScountId, setter *ScountUpdater) error
+		FindOne(ctx context.Context, id *ScountId) (Scount, error)
+	}
 }
 
 // Collection is a generic implementation of a collection with
