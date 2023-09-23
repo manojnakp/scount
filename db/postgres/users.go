@@ -55,7 +55,7 @@ WHERE uid = $1;
 var UserSelectTemplate = template.Must(template.New("user-select").
 	Funcs(template.FuncMap{"join": JoinSorter}).
 	Parse(`
-SELECT uid, email, username, password,
+SELECT DISTINCT uid, email, username, password,
 count(*) OVER () AS total
 FROM users
 WHERE ($1 OR uid = $2)

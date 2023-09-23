@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS scounts
     PRIMARY KEY (sid)
 );
 
-CREATE TABLE IF NOT EXISTS members (
+CREATE TABLE IF NOT EXISTS members
+(
     sid TEXT NOT NULL,
     uid TEXT NOT NULL,
     FOREIGN KEY (sid) REFERENCES scounts (sid),

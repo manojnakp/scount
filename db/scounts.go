@@ -14,6 +14,14 @@ type ScountId struct {
 	Sid string
 }
 
+// ScountFilter provides fields for filtering the users.
+type ScountFilter struct {
+	Sid   string
+	Uid   string
+	Owner string
+	Title string
+}
+
 // ScountUpdater provides fields for updating scounts.
 type ScountUpdater struct {
 	Owner string

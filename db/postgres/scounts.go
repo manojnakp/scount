@@ -11,6 +11,17 @@ import (
 	"github.com/manojnakp/scount/db"
 )
 
+// ScountInsertQuery is a query statement for adding a single scount by id.
+const ScountInsertQuery = `
+WITH mcte AS (
+	INSERT INTO scounts (sid, owner, title, description)
+	VALUES ($1, $2, $3, $4)
+	RETURNING sid, owner
+)
+INSERT INTO members
+SELECT sid, owner FROM mcte;
+`
+
 // ScountDeleteQuery is a query statement for deleting a single scount by sid.
 const ScountDeleteQuery = `
 DELETE FROM scounts
@@ -31,6 +42,24 @@ UPDATE scounts SET
 	{{ $col }} = {{ add $i 2 | printf "$%d" }}
 {{ end }}
 WHERE sid = $1;
+`))
+
+// ScountSelectTemplate is a query template for finding scounts from ScountCollection.
+var ScountSelectTemplate = template.Must(template.New("scount-select").
+	Funcs(template.FuncMap{"join": JoinSorter}).
+	Parse(`
+SELECT DISTINCT sid, owner, title, description,
+count(*) OVER () AS total
+FROM scounts NATURAL JOIN members
+WHERE ($1 OR sid = $2)
+AND ($3 OR uid = $4)
+AND ($5 OR owner = $6)
+AND ($7 OR title ILIKE $8)
+ORDER BY {{ join .Order "sid, uid" }}
+{{ with .Paging }}
+	LIMIT {{ .Limit }}
+	OFFSET {{ .Offset }}
+{{ end }};
 `))
 
 // ScountCollection provides a convenient way to interact with `scounts` table.
@@ -143,3 +172,103 @@ var _ interface {
 	UpdateOne(ctx context.Context, id *db.ScountId, setter *db.ScountUpdater) error
 	FindOne(ctx context.Context, id *db.ScountId) (db.Scount, error)
 } = ScountCollection{}
+
+// Insert adds one or more scounts into colln. db.ErrNoRows if empty scounts.
+func (colln ScountCollection) Insert(ctx context.Context, scounts ...db.Scount) error {
+	if len(scounts) == 0 {
+		return db.ErrNoRows
+	}
+	_, err := Tx[struct{}](ctx, colln.DB, func(tx *sql.Tx) (struct{}, error) {
+		var zero struct{}
+		// prepare insert query
+		stmt, err := tx.PrepareContext(ctx, ScountInsertQuery)
+		if err != nil {
+			log.Println("invalid stmt to prepare: ", err)
+			return zero, err
+		}
+		defer stmt.Close()
+		// insert every scount
+		for _, s := range scounts {
+			res, err := stmt.ExecContext(ctx, s.Sid, s.Owner, s.Title, s.Description)
+			if err != nil {
+				return zero, Error(err)
+			}
+			// assert res.RowsAffected gives 1
+			count, err := res.RowsAffected()
+			if err == nil {
+				// assert count == 1
+				_ = count == 1
+			} else {
+				log.Println("failed RowsAffected: ", err)
+				// does not affect insert operation
+			}
+		}
+		return zero, nil
+	})
+	return err
+}
+
+// Find fetches all the scounts from colln subject to filter and projector
+// options specified.
+func (colln ScountCollection) Find(
+	ctx context.Context,
+	filter *db.ScountFilter,
+	projector *db.Projector,
+) (list db.List[db.Scount], err error) {
+	// pointer validity check
+	if filter == nil {
+		filter = new(db.ScountFilter)
+	}
+	if projector == nil {
+		projector = new(db.Projector)
+	}
+	// construct query from template
+	query, args, err := colln.buildSelectQuery(filter, projector)
+	if err != nil {
+		return
+	}
+	// execute query
+	rows, err := colln.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		err = Error(err)
+		return
+	}
+	defer rows.Close()
+	var scounts []db.Scount
+	var total int
+	// scan through the rows
+	for rows.Next() {
+		var s db.Scount
+		err = rows.Scan(&s.Sid, &s.Owner, &s.Title, &s.Description)
+		if err != nil {
+			return
+		}
+		scounts = append(scounts, s)
+	}
+	if err = rows.Err(); err != nil {
+		return
+	}
+	return db.List[db.Scount]{Data: scounts, Total: total}, nil
+}
+
+// buildSelectQuery constructs scount select query using
+// provided filter, projector and SCountSelectTemplate.
+func (colln ScountCollection) buildSelectQuery(
+	filter *db.ScountFilter,
+	projector *db.Projector,
+) (string, []any, error) {
+	// TODO: projector.Order[i] NOT IN db.ScountAllowedCols -> db.ErrInvalidColumn
+	args := make([]any, 0)
+	// WHERE clause
+	// construct
+	buf := new(bytes.Buffer)
+	err := ScountSelectTemplate.Execute(buf, projector)
+	if err != nil {
+		log.Println("tmpl exec scount-select: ", err)
+		return "", nil, err
+	}
+	return buf.String(), args, nil
+}
+
+// compile-time assertion
+var _ db.Collection[db.Scount, db.ScountFilter, db.ScountUpdater, db.ScountId] = ScountCollection{}
