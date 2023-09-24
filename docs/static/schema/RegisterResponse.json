@@ -1,20 +1,20 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "title": "response body for user registration",
-    "description": "Upon successful registration, the unique *user id* associated with the user is presented.",
-    "properties": {
-        "user_id": {
-            "type": "string",
-            "description": "A unique ID associated with this user account."
-        }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "response body for user registration",
+  "description": "Upon successful registration, the unique *user id* associated with the user is presented.",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "A unique ID associated with this user account."
+    }
+  },
+  "examples": [
+    {
+      "user_id": "2kj3e9ps8uq934ph"
     },
-    "examples": [
-        {
-            "user_id": "2kj3e9ps8uq934ph"
-        },
-        {
-            "user_id": "536j5khg64jh632i"
-        }
-    ]
+    {
+      "user_id": "536j5khg64jh632i"
+    }
+  ]
 }
