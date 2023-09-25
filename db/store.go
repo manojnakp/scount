@@ -72,6 +72,74 @@ type List[T any] struct {
 	Total int
 }
 
+// Iterable is a list of generic items being iterable. Iteration
+// is provided via a closure function.
+//
+// Note: If the `GOEXPERIMENT=range` in go version 1.22 becomes supported,
+// then such (push) iterator pattern will have compiler support for the
+// `for range` loops.
+type Iterable[T any] struct {
+	iterator func(yield func(T) bool) (int, error)
+	error    error
+	total    int
+	consumed bool
+}
+
+// Total returns the total number of elements in the list. It
+// is supposed to be called after consuming the list. If it is
+// called before iterating over the list, then call panics.
+func (list *Iterable[T]) Total() int {
+	if !list.consumed {
+		panic("iterator not consumed yet")
+	}
+	return list.total
+}
+
+// Iterator is the iterator that yields successive values of T in list.
+// It is a single-use iterator and the entire list is consumed after
+// looping over it. Cannot call Iterator after consuming the list,
+// otherwise call panics.
+func (list *Iterable[T]) Iterator(yield func(T) bool) {
+	if list.consumed {
+		panic("iterator already consumed")
+	}
+	list.consumed = true
+	list.total, list.error = list.iterator(yield)
+}
+
+// NewIterable is the construct for list from a closure that yields
+// successive values of T and reports the total items or error.
+func NewIterable[T any](iterator func(yield func(T) bool) (int, error)) *Iterable[T] {
+	return &Iterable[T]{
+		iterator: iterator,
+	}
+}
+
+// ListFromIterable allows forward migration for iterable syntax.
+func ListFromIterable[T any](iterable *Iterable[T]) (list List[T], err error) {
+	var data []T
+	iterable.Iterator(func(t T) bool {
+		data = append(data, t)
+		return true
+	})
+	err = iterable.Err()
+	if err != nil {
+		return
+	}
+	total := iterable.Total()
+	return List[T]{Data: data, Total: total}, nil
+}
+
+// Err reports any errors that occurred during the iteration over
+// the list. It is supposed to be called after iteration, otherwise
+// the call panics.
+func (list *Iterable[T]) Err() error {
+	if !list.consumed {
+		panic("iterator not consumed yet")
+	}
+	return list.error
+}
+
 // Column defines the column names over which sorting and filtering can
 // be performed for a collection.
 type Column string
