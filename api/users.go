@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -80,11 +81,13 @@ func (res UserResource) fetch(w http.ResponseWriter, r *http.Request) {
 func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm() // populates url query parameters to r.Form.
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	query, err := ParseUserParams(r.Form)
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -103,6 +106,7 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 	// database call
 	users, err := res.DB.Users.Find(r.Context(), filter, projector)
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

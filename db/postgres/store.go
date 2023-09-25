@@ -140,7 +140,7 @@ type queryData[T any] struct {
 // a closure (avoid callback hell).
 func (data queryData[T]) iterator(yield func(T) bool) (int, error) {
 	var total int
-	err := data.sqldb.QueryRowContext(data.context, data.counter, data.args).
+	err := data.sqldb.QueryRowContext(data.context, data.counter, data.args...).
 		Scan(&total)
 	if err != nil {
 		return 0, err

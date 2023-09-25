@@ -60,12 +60,16 @@ var UserSelectTemplate = template.Must(template.New("user-select").
 	WHERE ($1 OR uid = $2)
 	AND ($3 OR email = $4)
 	AND ($5 OR username ILIKE $6)
+{{ end }}
+
+{{ define "sort" }}
 	ORDER BY {{ join .Order "uid" }}
 {{ end }}
 
 {{ define "find" }}
-	SELECT DISTINCT uid, email, username, password,
-	{{ template "filter"}}
+	SELECT DISTINCT uid, email, username, password
+	{{ template "filter" }}
+	{{ template "sort" }}
 	{{ with .Paging }}
 		LIMIT {{ .Limit }}
 		OFFSET {{ .Offset }}
@@ -74,7 +78,9 @@ var UserSelectTemplate = template.Must(template.New("user-select").
 
 {{ define "count" }}
 	SELECT count(*) AS total
-	{{ template "filter" }};
+	{{ template "filter" }}
+	GROUP BY uid
+	{{ template "sort" }};
 {{ end }}
 `))
 

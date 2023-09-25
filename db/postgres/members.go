@@ -33,16 +33,26 @@ WHERE sid = $1 AND uid = $2;`
 var MemberSelectTemplate = template.Must(template.New("member-select").
 	Funcs(template.FuncMap{"join": JoinSorter}).
 	Parse(`
-SELECT sid, uid,
-count(*) OVER () AS total
-FROM members
-WHERE ($1 OR sid = $2)
-AND ($3 OR uid = $4)
-ORDER BY {{ join .Order "sid, uid" }}
-{{ with .Paging }}
-	LIMIT {{ .Limit }}
-	OFFSET {{ .Offset }}
-{{ end }};
+{{ define "filter" }}
+	FROM members
+	WHERE ($1 OR sid = $2)
+	AND ($3 OR uid = $4)
+	ORDER BY {{ join .Order "sid, uid" }}
+{{ end }}
+
+{{ define "find" }}
+	SELECT sid, uid,
+	{{ template "filter" }}
+	{{ with .Paging }}
+		LIMIT {{ .Limit }}
+		OFFSET {{ .Offset }}
+	{{ end }};
+{{ end }}
+
+{{ define "count" }}
+	SELECT count(*) AS total
+	{{ template "filter" }};
+{{ end }}
 `))
 
 // MemberCollection provides a convenient way to interact with `members` table.
@@ -134,60 +144,67 @@ func (colln MemberCollection) Find(
 	filter *db.MemberFilter,
 	projector *db.Projector,
 ) (list db.List[db.Member], err error) {
-	// pointer validity check
-	if filter == nil {
-		filter = new(db.MemberFilter)
-	}
-	if projector == nil {
-		projector = new(db.Projector)
-	}
-	// construct query from template
-	query, args, err := colln.buildSelectQuery(filter, projector)
+	args := colln.buildArgs(filter)
+	counter, finder, err := colln.buildSelectQuery(projector)
 	if err != nil {
 		return
 	}
-	// execute query
-	rows, err := colln.DB.QueryContext(ctx, query, args...)
+	iterator := func(yield func(db.Member) bool) (int, error) {
+		return Tx[int](ctx, colln.DB, func(tx *sql.Tx) (int, error) {
+			return queryData[db.Member]{
+				context: ctx,
+				sqldb:   tx,
+				counter: counter,
+				finder:  finder,
+				args:    args,
+				scanner: colln.scanOne,
+			}.iterator(yield)
+		})
+	}
+	iterable := db.NewIterable(iterator)
+	return db.ListFromIterable(iterable)
+}
+
+// scanOne scans one member from rows and returns associated data.
+func (colln MemberCollection) scanOne(rows *sql.Rows) (m db.Member, err error) {
+	var member db.Member
+	err = rows.Scan(&member.Sid, &member.Uid)
 	if err != nil {
-		err = Error(err)
 		return
 	}
-	defer rows.Close()
-	var members []db.Member
-	var total int
-	// scan through the rows
-	for rows.Next() {
-		var m db.Member
-		err = rows.Scan(&m.Sid, &m.Uid)
-		if err != nil {
-			return
-		}
-		members = append(members, m)
-	}
-	if err = rows.Err(); err != nil {
-		return
-	}
-	return db.List[db.Member]{Data: members, Total: total}, nil
+	return member, nil
 }
 
 // buildSelectQuery constructs member select query using provided
 // filter, projector and MemberSelectTemplate.
-func (colln MemberCollection) buildSelectQuery(
-	filter *db.MemberFilter, projector *db.Projector,
-) (string, []any, error) {
+func (colln MemberCollection) buildSelectQuery(projector *db.Projector) (string, string, error) {
 	// TODO: projector.Order[i] NOT IN db.MemberAllowedCols -> db.ErrInvalidColumn
+	// construct count template
+	buf := new(bytes.Buffer)
+	err := MemberSelectTemplate.ExecuteTemplate(buf, "count", projector)
+	if err != nil {
+		return "", "", err
+	}
+	counter := buf.String()
+	// construct find template
+	buf.Reset()
+	err = MemberSelectTemplate.ExecuteTemplate(buf, "find", projector)
+	if err != nil {
+		return "", "", err
+	}
+	finder := buf.String()
+	return counter, finder, nil
+}
+
+func (colln MemberCollection) buildArgs(filter *db.MemberFilter) []any {
+	if filter == nil {
+		filter = new(db.MemberFilter)
+	}
 	args := make([]any, 0)
 	// WHERE clause
 	args = append(args, filter.Sid == "", filter.Sid)
 	args = append(args, filter.Uid == "", filter.Uid)
-	// construct
-	buf := new(bytes.Buffer)
-	err := MemberSelectTemplate.Execute(buf, projector)
-	if err != nil {
-		log.Println("tmpl exec member-select: ", err)
-		return "", nil, err
-	}
-	return buf.String(), args, nil
+	return args
 }
 
 // compile-time assertion
