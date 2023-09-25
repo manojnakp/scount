@@ -120,3 +120,45 @@ func Tx[T any](
 	}
 	return value, nil
 }
+
+// queryData is a convenience struct to capture context information
+// as an alternative to writing a closure.
+type queryData[T any] struct {
+	context context.Context
+	sqldb   interface {
+		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+		QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	}
+	counter string
+	finder  string
+	args    []any
+	scanner func(*sql.Rows) (T, error)
+}
+
+// iterator is the iterator function for constructing [db.Iterable].
+// queryData struct is used to capture variables instead of writing
+// a closure (avoid callback hell).
+func (data queryData[T]) iterator(yield func(T) bool) (int, error) {
+	var total int
+	err := data.sqldb.QueryRowContext(data.context, data.counter, data.args).
+		Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	rows, err := data.sqldb.QueryContext(data.context, data.finder, data.args...)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		t, err := data.scanner(rows)
+		if err != nil {
+			return total, err
+		}
+		if !yield(t) {
+			break
+		}
+	}
+	err = rows.Err()
+	return total, err
+}
