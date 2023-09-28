@@ -40,7 +40,7 @@ type Collection[Item, Filter, Updater, Id any] interface {
 	UpdateOne(context.Context, *Id, *Updater) error
 	// Find fetches all the records that match the given filter and projects
 	// them as a list. If no records match, then empty list.
-	Find(context.Context, *Filter, *Projector) (List[Item], error)
+	Find(context.Context, *Filter, *Projector) (*Iterable[Item], error)
 	// FindOne fetches exactly one matching record. If no such record exist
 	// in the database, then ErrNoRows.
 	FindOne(ctx context.Context, id *Id) (Item, error)
@@ -66,7 +66,9 @@ type Sorter struct {
 }
 
 // List is a generic list of items.
-// TODO: convert into iterator.
+//
+// Deprecated: using entire slice of items is impractical. Switch
+// to Iterable instead.
 type List[T any] struct {
 	Data  []T
 	Total int
@@ -116,6 +118,8 @@ func NewIterable[T any](iterator func(yield func(T) bool) (int, error)) *Iterabl
 }
 
 // ListFromIterable allows forward migration for iterable syntax.
+//
+// Deprecated: Used to provide migration from List. List is no longer supported.
 func ListFromIterable[T any](iterable *Iterable[T]) (list List[T], err error) {
 	var data []T
 	iterable.Iterator(func(t T) bool {

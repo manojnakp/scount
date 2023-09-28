@@ -276,7 +276,7 @@ func (colln UserCollection) Find(
 	ctx context.Context,
 	filter *db.UserFilter,
 	projector *db.Projector,
-) (list db.List[db.User], err error) {
+) (list *db.Iterable[db.User], err error) {
 	args := colln.buildArgs(filter)
 	counter, finder, err := colln.buildSelectQuery(projector)
 	if err != nil {
@@ -294,8 +294,7 @@ func (colln UserCollection) Find(
 			}.iterator(yield)
 		})
 	}
-	iterable := db.NewIterable[db.User](iterator)
-	return db.ListFromIterable(iterable)
+	return db.NewIterable[db.User](iterator), nil
 }
 
 // scanOne scans one user from rows and returns associated data.

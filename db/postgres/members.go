@@ -120,7 +120,10 @@ func (colln MemberCollection) UpdateOne(context.Context, *db.MemberId, *db.Membe
 }
 
 // FindOne fetches member from colln by id.
-func (colln MemberCollection) FindOne(ctx context.Context, id *db.MemberId) (m db.Member, err error) {
+func (colln MemberCollection) FindOne(
+	ctx context.Context,
+	id *db.MemberId,
+) (m db.Member, err error) {
 	if id == nil {
 		err = db.ErrNil
 		return
@@ -143,13 +146,13 @@ func (colln MemberCollection) Find(
 	ctx context.Context,
 	filter *db.MemberFilter,
 	projector *db.Projector,
-) (list db.List[db.Member], err error) {
+) (list *db.Iterable[db.Member], err error) {
 	args := colln.buildArgs(filter)
 	counter, finder, err := colln.buildSelectQuery(projector)
 	if err != nil {
 		return
 	}
-	iterator := func(yield func(db.Member) bool) (int, error) {
+	iterable := func(yield func(db.Member) bool) (int, error) {
 		return Tx[int](ctx, colln.DB, func(tx *sql.Tx) (int, error) {
 			return queryData[db.Member]{
 				context: ctx,
@@ -161,8 +164,7 @@ func (colln MemberCollection) Find(
 			}.iterator(yield)
 		})
 	}
-	iterable := db.NewIterable(iterator)
-	return db.ListFromIterable(iterable)
+	return db.NewIterable(iterable), nil
 }
 
 // scanOne scans one member from rows and returns associated data.

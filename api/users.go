@@ -111,15 +111,22 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// build response collection
-	total := users.Total
-	list := make([]UserInfo, 0, len(users.Data))
-	for _, x := range users.Data {
+	list := make([]UserInfo, 0)
+	users.Iterator(func(u db.User) bool {
 		list = append(list, UserInfo{
-			Id:    x.Uid,
-			Email: x.Email,
-			Name:  x.Username,
+			Id:    u.Uid,
+			Email: u.Email,
+			Name:  u.Username,
 		})
+		return true
+	})
+	err = users.Err()
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	total := users.Total()
 	// link header
 	if total > 0 {
 		header := res.linkHeader(r.URL.Query(), query.Size, 0, total/query.Size)

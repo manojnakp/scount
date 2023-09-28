@@ -159,7 +159,10 @@ func (colln ScountCollection) buildUpdateQuery(
 }
 
 // FindOne fetches scount from colln by id.
-func (colln ScountCollection) FindOne(ctx context.Context, id *db.ScountId) (s db.Scount, err error) {
+func (colln ScountCollection) FindOne(
+	ctx context.Context,
+	id *db.ScountId,
+) (s db.Scount, err error) {
 	if id == nil {
 		err = db.ErrNil
 		return
@@ -224,7 +227,7 @@ func (colln ScountCollection) Find(
 	ctx context.Context,
 	filter *db.ScountFilter,
 	projector *db.Projector,
-) (list db.List[db.Scount], err error) {
+) (list *db.Iterable[db.Scount], err error) {
 	args := colln.buildArgs(filter)
 	counter, finder, err := colln.buildSelectQuery(projector)
 	if err != nil {
@@ -242,8 +245,7 @@ func (colln ScountCollection) Find(
 			}.iterator(yield)
 		})
 	}
-	iterable := db.NewIterable[db.Scount](iterator)
-	return db.ListFromIterable(iterable)
+	return db.NewIterable[db.Scount](iterator), nil
 }
 
 // scanOne scans one scount from rows and returns associated data.
