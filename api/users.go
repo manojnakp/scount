@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -80,11 +81,13 @@ func (res UserResource) fetch(w http.ResponseWriter, r *http.Request) {
 func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm() // populates url query parameters to r.Form.
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	query, err := ParseUserParams(r.Form)
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -103,19 +106,27 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 	// database call
 	users, err := res.DB.Users.Find(r.Context(), filter, projector)
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	// build response collection
-	total := users.Total
-	list := make([]UserInfo, 0, len(users.Data))
-	for _, x := range users.Data {
+	list := make([]UserInfo, 0)
+	users.Iterator(func(u db.User) bool {
 		list = append(list, UserInfo{
-			Id:    x.Uid,
-			Email: x.Email,
-			Name:  x.Username,
+			Id:    u.Uid,
+			Email: u.Email,
+			Name:  u.Username,
 		})
+		return true
+	})
+	err = users.Err()
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	total := users.Total()
 	// link header
 	if total > 0 {
 		header := res.linkHeader(r.URL.Query(), query.Size, 0, total/query.Size)

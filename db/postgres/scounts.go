@@ -48,18 +48,28 @@ WHERE sid = $1;
 var ScountSelectTemplate = template.Must(template.New("scount-select").
 	Funcs(template.FuncMap{"join": JoinSorter}).
 	Parse(`
-SELECT DISTINCT sid, owner, title, description,
-count(*) OVER () AS total
-FROM scounts NATURAL JOIN members
-WHERE ($1 OR sid = $2)
-AND ($3 OR uid = $4)
-AND ($5 OR owner = $6)
-AND ($7 OR title ILIKE $8)
-ORDER BY {{ join .Order "sid, uid" }}
-{{ with .Paging }}
-	LIMIT {{ .Limit }}
-	OFFSET {{ .Offset }}
-{{ end }};
+{{ define "filter" }}
+	FROM scounts NATURAL JOIN members
+	WHERE ($1 OR sid = $2)
+	AND ($3 OR uid = $4)
+	AND ($5 OR owner = $6)
+	AND ($7 OR title ILIKE $8)
+	ORDER BY {{ join .Order "sid, uid" }}
+{{ end }}
+
+{{ define "find" }}
+	SELECT DISTINCT sid, owner, title, description,
+	{{ template "filter" }}
+	{{ with .Paging }}
+		LIMIT {{ .Limit }}
+		OFFSET {{ .Offset }}
+	{{ end }};
+{{ end }}
+
+{{ define "count" }}
+	SELECT count(*) AS total
+	{{ template "filter" }};
+{{ end }}
 `))
 
 // ScountCollection provides a convenient way to interact with `scounts` table.
@@ -149,7 +159,10 @@ func (colln ScountCollection) buildUpdateQuery(
 }
 
 // FindOne fetches scount from colln by id.
-func (colln ScountCollection) FindOne(ctx context.Context, id *db.ScountId) (s db.Scount, err error) {
+func (colln ScountCollection) FindOne(
+	ctx context.Context,
+	id *db.ScountId,
+) (s db.Scount, err error) {
 	if id == nil {
 		err = db.ErrNil
 		return
@@ -214,60 +227,74 @@ func (colln ScountCollection) Find(
 	ctx context.Context,
 	filter *db.ScountFilter,
 	projector *db.Projector,
-) (list db.List[db.Scount], err error) {
-	// pointer validity check
-	if filter == nil {
-		filter = new(db.ScountFilter)
-	}
-	if projector == nil {
-		projector = new(db.Projector)
-	}
-	// construct query from template
-	query, args, err := colln.buildSelectQuery(filter, projector)
+) (list *db.Iterable[db.Scount], err error) {
+	args := colln.buildArgs(filter)
+	counter, finder, err := colln.buildSelectQuery(projector)
 	if err != nil {
 		return
 	}
-	// execute query
-	rows, err := colln.DB.QueryContext(ctx, query, args...)
+	iterator := func(yield func(db.Scount) bool) (int, error) {
+		return Tx[int](ctx, colln.DB, func(tx *sql.Tx) (int, error) {
+			return queryData[db.Scount]{
+				context: ctx,
+				sqldb:   tx,
+				counter: counter,
+				finder:  finder,
+				args:    args,
+				scanner: colln.scanOne,
+			}.iterator(yield)
+		})
+	}
+	return db.NewIterable[db.Scount](iterator), nil
+}
+
+// scanOne scans one scount from rows and returns associated data.
+func (colln ScountCollection) scanOne(rows *sql.Rows) (s db.Scount, err error) {
+	var scount db.Scount
+	err = rows.Scan(&scount.Sid, &scount.Owner, &scount.Title, &scount.Description)
 	if err != nil {
-		err = Error(err)
 		return
 	}
-	defer rows.Close()
-	var scounts []db.Scount
-	var total int
-	// scan through the rows
-	for rows.Next() {
-		var s db.Scount
-		err = rows.Scan(&s.Sid, &s.Owner, &s.Title, &s.Description)
-		if err != nil {
-			return
-		}
-		scounts = append(scounts, s)
-	}
-	if err = rows.Err(); err != nil {
-		return
-	}
-	return db.List[db.Scount]{Data: scounts, Total: total}, nil
+	return scount, nil
 }
 
 // buildSelectQuery constructs scount select query using
 // provided filter, projector and SCountSelectTemplate.
-func (colln ScountCollection) buildSelectQuery(
-	filter *db.ScountFilter,
-	projector *db.Projector,
-) (string, []any, error) {
+func (colln ScountCollection) buildSelectQuery(projector *db.Projector) (string, string, error) {
 	// TODO: projector.Order[i] NOT IN db.ScountAllowedCols -> db.ErrInvalidColumn
-	args := make([]any, 0)
-	// WHERE clause
-	// construct
+	if projector == nil {
+		projector = new(db.Projector)
+	}
+	// construct count query
 	buf := new(bytes.Buffer)
-	err := ScountSelectTemplate.Execute(buf, projector)
+	err := ScountSelectTemplate.ExecuteTemplate(buf, "count", projector)
 	if err != nil {
 		log.Println("tmpl exec scount-select: ", err)
-		return "", nil, err
+		return "", "", err
 	}
-	return buf.String(), args, nil
+	counter := buf.String()
+	// construct find query
+	buf.Reset()
+	err = ScountSelectTemplate.ExecuteTemplate(buf, "find", projector)
+	if err != nil {
+		return "", "", err
+	}
+	finder := buf.String()
+	return counter, finder, nil
+}
+
+// buildArgs constructs sql dollar argument values for executing the query.
+func (colln ScountCollection) buildArgs(filter *db.ScountFilter) []any {
+	if filter == nil {
+		filter = new(db.ScountFilter)
+	}
+	args := make([]any, 0)
+	// WHERE clause
+	args = append(args, filter.Sid == "", filter.Sid)
+	args = append(args, filter.Uid == "", filter.Uid)
+	args = append(args, filter.Owner == "", filter.Owner)
+	args = append(args, filter.Title == "", filter.Title)
+	return args
 }
 
 // compile-time assertion

@@ -55,17 +55,33 @@ WHERE uid = $1;
 var UserSelectTemplate = template.Must(template.New("user-select").
 	Funcs(template.FuncMap{"join": JoinSorter}).
 	Parse(`
-SELECT DISTINCT uid, email, username, password,
-count(*) OVER () AS total
-FROM users
-WHERE ($1 OR uid = $2)
-AND ($3 OR email = $4)
-AND ($5 OR username ILIKE $6)
-ORDER BY {{ join .Order "uid" }}
-{{ with .Paging }}
-	LIMIT {{ .Limit }}
-	OFFSET {{ .Offset }}
-{{ end }};
+{{ define "filter" }}
+	FROM users
+	WHERE ($1 OR uid = $2)
+	AND ($3 OR email = $4)
+	AND ($5 OR username ILIKE $6)
+{{ end }}
+
+{{ define "sort" }}
+	ORDER BY {{ join .Order "uid" }}
+{{ end }}
+
+{{ define "find" }}
+	SELECT DISTINCT uid, email, username, password
+	{{ template "filter" }}
+	{{ template "sort" }}
+	{{ with .Paging }}
+		LIMIT {{ .Limit }}
+		OFFSET {{ .Offset }}
+	{{ end }};
+{{ end }}
+
+{{ define "count" }}
+	SELECT count(*) AS total
+	{{ template "filter" }}
+	GROUP BY uid
+	{{ template "sort" }};
+{{ end }}
 `))
 
 // UserCollection provides a convenient way to interact with `users` table.
@@ -260,69 +276,79 @@ func (colln UserCollection) Find(
 	ctx context.Context,
 	filter *db.UserFilter,
 	projector *db.Projector,
-) (list db.List[db.User], err error) {
-	// pointer validity check
-	if filter == nil {
-		filter = new(db.UserFilter)
-	}
-	if projector == nil {
-		projector = new(db.Projector)
-	}
-	// construct query from template
-	query, args, err := colln.buildSelectQuery(filter, projector)
+) (list *db.Iterable[db.User], err error) {
+	args := colln.buildArgs(filter)
+	counter, finder, err := colln.buildSelectQuery(projector)
 	if err != nil {
 		return
 	}
-	// execute query
-	rows, err := colln.DB.QueryContext(ctx, query, args...)
+	iterator := func(yield func(db.User) bool) (int, error) {
+		return Tx[int](ctx, colln.DB, func(tx *sql.Tx) (int, error) {
+			return queryData[db.User]{
+				context: ctx,
+				sqldb:   tx,
+				counter: counter,
+				finder:  finder,
+				args:    args,
+				scanner: colln.scanOne,
+			}.iterator(yield)
+		})
+	}
+	return db.NewIterable[db.User](iterator), nil
+}
+
+// scanOne scans one user from rows and returns associated data.
+func (colln UserCollection) scanOne(rows *sql.Rows) (u db.User, err error) {
+	var user db.User
+	var password string
+	err = rows.Scan(&user.Uid, &user.Email, &user.Username, &password)
 	if err != nil {
-		err = Error(err)
 		return
 	}
-	defer rows.Close()
-	var users []db.User
-	var total int
-	// scan through the rows
-	for rows.Next() {
-		var u db.User
-		var password string
-		err = rows.Scan(&u.Uid, &u.Email, &u.Username, &password, &total)
-		if err != nil {
-			return
-		}
-		u.Password, err = base64.StdEncoding.DecodeString(password)
-		if err != nil {
-			err = internal.Error{Pretty: db.ErrEncoding, Err: err}
-			return
-		}
-		users = append(users, u)
-	}
-	if err = rows.Err(); err != nil {
+	user.Password, err = base64.StdEncoding.DecodeString(password)
+	if err != nil {
+		err = internal.Error{Pretty: db.ErrEncoding, Err: err}
 		return
 	}
-	return db.List[db.User]{Data: users, Total: total}, nil
+	return user, err
 }
 
 // buildSelectQuery constructs user select query using
 // provided filter, projector and UserSelectTemplate.
-func (colln UserCollection) buildSelectQuery(
-	filter *db.UserFilter,
-	projector *db.Projector,
-) (string, []any, error) {
+func (colln UserCollection) buildSelectQuery(projector *db.Projector) (string, string, error) {
 	// TODO: projector.Order[i] NOT IN db.UserAllowedCols -> db.ErrInvalidColumn
+	if projector == nil {
+		projector = new(db.Projector)
+	}
+	// construct count query
+	buf := new(bytes.Buffer)
+	err := UserSelectTemplate.ExecuteTemplate(buf, "count", projector)
+	if err != nil {
+		return "", "", err
+	}
+	counter := buf.String()
+	// construct find query
+	buf.Reset()
+	err = UserSelectTemplate.ExecuteTemplate(buf, "find", projector)
+	if err != nil {
+		return "", "", err
+	}
+	finder := buf.String()
+	return counter, finder, nil
+}
+
+// buildArgs constructs sql dollar argument values for executing the query.
+func (colln UserCollection) buildArgs(filter *db.UserFilter) []any {
+	// pointer validity check
+	if filter == nil {
+		filter = new(db.UserFilter)
+	}
 	args := make([]any, 0)
 	// WHERE clause
 	args = append(args, filter.Uid == "", filter.Uid)
 	args = append(args, filter.Email == "", filter.Email)
 	args = append(args, filter.Username == "", filter.Username)
-	// construct
-	buf := new(bytes.Buffer)
-	err := UserSelectTemplate.Execute(buf, projector)
-	if err != nil {
-		log.Println("tmpl exec user-select: ", err)
-		return "", nil, err
-	}
-	return buf.String(), args, nil
+	return args
 }
 
 // compile-time assertion

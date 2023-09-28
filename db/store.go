@@ -40,7 +40,7 @@ type Collection[Item, Filter, Updater, Id any] interface {
 	UpdateOne(context.Context, *Id, *Updater) error
 	// Find fetches all the records that match the given filter and projects
 	// them as a list. If no records match, then empty list.
-	Find(context.Context, *Filter, *Projector) (List[Item], error)
+	Find(context.Context, *Filter, *Projector) (*Iterable[Item], error)
 	// FindOne fetches exactly one matching record. If no such record exist
 	// in the database, then ErrNoRows.
 	FindOne(ctx context.Context, id *Id) (Item, error)
@@ -65,11 +65,57 @@ type Sorter struct {
 	Desc   bool   // descending order
 }
 
-// List is a generic list of items.
-// TODO: convert into iterator.
-type List[T any] struct {
-	Data  []T
-	Total int
+// Iterable is a list of generic items being iterable. Iteration
+// is provided via a closure function.
+//
+// Note: If the `GOEXPERIMENT=range` in go version 1.22 becomes supported,
+// then such (push) iterator pattern will have compiler support for the
+// `for range` loops.
+type Iterable[T any] struct {
+	iterator func(yield func(T) bool) (int, error)
+	error    error
+	total    int
+	consumed bool
+}
+
+// Total returns the total number of elements in the list. It
+// is supposed to be called after consuming the list. If it is
+// called before iterating over the list, then call panics.
+func (list *Iterable[T]) Total() int {
+	if !list.consumed {
+		panic("iterator not consumed yet")
+	}
+	return list.total
+}
+
+// Iterator is the iterator that yields successive values of T in list.
+// It is a single-use iterator and the entire list is consumed after
+// looping over it. Cannot call Iterator after consuming the list,
+// otherwise call panics.
+func (list *Iterable[T]) Iterator(yield func(T) bool) {
+	if list.consumed {
+		panic("iterator already consumed")
+	}
+	list.consumed = true
+	list.total, list.error = list.iterator(yield)
+}
+
+// NewIterable is the construct for list from a closure that yields
+// successive values of T and reports the total items or error.
+func NewIterable[T any](iterator func(yield func(T) bool) (int, error)) *Iterable[T] {
+	return &Iterable[T]{
+		iterator: iterator,
+	}
+}
+
+// Err reports any errors that occurred during the iteration over
+// the list. It is supposed to be called after iteration, otherwise
+// the call panics.
+func (list *Iterable[T]) Err() error {
+	if !list.consumed {
+		panic("iterator not consumed yet")
+	}
+	return list.error
 }
 
 // Column defines the column names over which sorting and filtering can
