@@ -65,15 +65,6 @@ type Sorter struct {
 	Desc   bool   // descending order
 }
 
-// List is a generic list of items.
-//
-// Deprecated: using entire slice of items is impractical. Switch
-// to Iterable instead.
-type List[T any] struct {
-	Data  []T
-	Total int
-}
-
 // Iterable is a list of generic items being iterable. Iteration
 // is provided via a closure function.
 //
@@ -115,23 +106,6 @@ func NewIterable[T any](iterator func(yield func(T) bool) (int, error)) *Iterabl
 	return &Iterable[T]{
 		iterator: iterator,
 	}
-}
-
-// ListFromIterable allows forward migration for iterable syntax.
-//
-// Deprecated: Used to provide migration from List. List is no longer supported.
-func ListFromIterable[T any](iterable *Iterable[T]) (list List[T], err error) {
-	var data []T
-	iterable.Iterator(func(t T) bool {
-		data = append(data, t)
-		return true
-	})
-	err = iterable.Err()
-	if err != nil {
-		return
-	}
-	total := iterable.Total()
-	return List[T]{Data: data, Total: total}, nil
 }
 
 // Err reports any errors that occurred during the iteration over
