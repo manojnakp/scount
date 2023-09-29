@@ -14,7 +14,7 @@ import (
 )
 
 // filesystem embedding `./docs/static` contains json files (mostly schema definitions),
-// OpenAPI spec and API documentation as `index.html` file.
+// OpenAPI spec and API documentation as `ref.html` file.
 //
 //go:embed docs/static
 var filesystem embed.FS
@@ -36,7 +36,7 @@ func (d DocHandler) Router() chi.Router {
 	})
 	// serve html docs
 	r.Get("/docs.html", func(w http.ResponseWriter, r *http.Request) {
-		d.ServeFile(w, r, "index.html")
+		d.ServeFile(w, r, "ref.html")
 	})
 	return r
 }

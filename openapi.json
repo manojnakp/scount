@@ -3,8 +3,8 @@
   "info": {
     "title": "SCount",
     "summary": "A simple expense sharing application for splitting and balancing bills among friends.",
-    "description": "# Usage\n\n* Add expenses by entering the amount and who is paying.\n* Invite participants to the group (SCount) so that they\n  can log their own expenses and review what others\n  have added.\n* View your balance at any time and check the total\n  expense of your entire group.\n* Money you owe others and money you are owed are\n  managed elegantly.\n* Let the application do the calculations. It finds the\n  most efficient way for everyone to pay each other what\n  they owe.\n\n# Key Features\n\n## Everyone can add\n\nYour friends can join via their phones or online to\nadd expenses and check their balances. Anyone involved\nin an SCount can add friends to it.\n\n## Split unevenly\n\nNot every cost will be split equally. Set a different\nlevel of reimbursement for each person. An expense can\nbe split in a particular ratio or according to custom\namounts.\n\n## Share your SCount\n\nSharing an SCount is as simple as sharing the unique url\nof the SCount. Any participating member can view or log\none's expenses to it with no hassle.\n",
-    "version": "0.1.0",
+    "description": "# Usage\n\n* Add expenses by entering the amount and who is paying.\n* Invite participants to the group (SCount) so that they\n  can log their own expenses and review what others\n  have added.\n* View your balance at any time and check the total\n  expense of your entire group.\n* Money you owe others and money you are owed are\n  managed elegantly.\n* Let the application do the calculations. It finds the\n  most efficient way for everyone to pay each other what\n  they owe.\n\n# Key Features\n\n* **Everyone can add**:\nYour friends can join via their phones or online to\nadd expenses and check their balances. Anyone involved\nin an SCount can add friends to it.\n\n* **Split unevenly**:\nNot every cost will be split equally. Set a different\nlevel of reimbursement for each person. An expense can\nbe split in a particular ratio or according to custom\namounts.\n\n* **Share your SCount**\nSharing an SCount is as simple as sharing the unique url\nof the SCount. Any participating member can view or log\none's expenses to it with no hassle.\n",
+    "version": "0.2.0",
     "contact": {
       "name": "Manojna",
       "url": "https://github.com/manojnakp",
@@ -25,7 +25,7 @@
     "/auth/register": {
       "summary": "Operations related to user sign up",
       "post": {
-        "operationId": "UserRegister",
+        "operationId": "RegisterUser",
         "tags": [
           "auth"
         ],
@@ -49,7 +49,7 @@
         },
         "responses": {
           "200": {
-            "description": "Sign up successfull, here's your user id.",
+            "description": "Sign up successful, here's your user id.",
             "headers": {
               "location": {
                 "description": "URI of the user resource for the newly signed up user",
@@ -86,9 +86,6 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       }
@@ -96,7 +93,7 @@
     "/auth/login": {
       "summary": "Operations related to user sign in",
       "post": {
-        "operationId": "UserLogin",
+        "operationId": "LoginUser",
         "tags": [
           "auth"
         ],
@@ -119,7 +116,7 @@
         },
         "responses": {
           "200": {
-            "description": "Sign in successfull, use this token to authenticate your requests.",
+            "description": "Sign in successful, use this token to authenticate your requests.",
             "content": {
               "application/json": {
                 "schema": {
@@ -142,9 +139,6 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       }
@@ -152,7 +146,7 @@
     "/auth/password": {
       "summary": "Operations related to password change",
       "post": {
-        "operationId": "PasswordChange",
+        "operationId": "ChangePassword",
         "tags": [
           "auth"
         ],
@@ -169,7 +163,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./schema/PasswordChange.json"
+                "$ref": "./schema/PasswordChanger.json"
               },
               "example": {
                 "old": "iamjd0e",
@@ -180,13 +174,16 @@
         },
         "responses": {
           "204": {
-            "description": "Password change successfull"
+            "description": "Password change successful"
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
@@ -199,9 +196,6 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       }
@@ -213,8 +207,8 @@
           "users"
         ],
         "summary": "list all matching users",
-        "description": "Get a list of all users filtered by requested fields",
-        "operationId": "UserList",
+        "description": "Get a list of all users filtered by requested fields. Multiple filters are composed using **AND** operator.",
+        "operationId": "ListUsers",
         "security": [
           {
             "token": []
@@ -226,7 +220,7 @@
             "in": "query",
             "description": "unique id of the user (exact match)",
             "schema": {
-              "type": "string"
+              "$ref": "./schema/UserQuery.json#/properties/id"
             },
             "example": "2btj7xhkjvecvap6"
           },
@@ -235,8 +229,7 @@
             "in": "query",
             "description": "email id of the user (exact match)",
             "schema": {
-              "type": "string",
-              "format": "email"
+              "$ref": "./schema/UserQuery.json#/properties/email"
             },
             "example": "alice@example.net"
           },
@@ -245,7 +238,7 @@
             "in": "query",
             "description": "username of the user (approx match) *case insensitive*",
             "schema": {
-              "type": "string"
+              "$ref": "./schema/UserQuery.json#/properties/name"
             },
             "example": "alex"
           },
@@ -254,16 +247,12 @@
             "in": "query",
             "description": "*sort* defines the field on which entries are sorted. Default: 'id'",
             "schema": {
-              "enum": [
-                "id",
-                "username",
-                "email"
-              ]
+              "$ref": "./schema/UserQuery.json#/properties/sort"
             },
-            "example": "id"
-          },
-          {
-            "$ref": "#/components/parameters/order"
+            "example": [
+              "id",
+              "~email"
+            ]
           },
           {
             "$ref": "#/components/parameters/size"
@@ -283,7 +272,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./schema/UserList.json"
+                  "type": "array",
+                  "items": {
+                    "$ref": "./schema/User.json"
+                  }
                 },
                 "example": [
                   {
@@ -301,11 +293,11 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableContent"
+          },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       }
@@ -323,7 +315,7 @@
         ],
         "summary": "fetch user details",
         "description": "Get the user information about the one requested in `uid`",
-        "operationId": "UserFetch",
+        "operationId": "GetUser",
         "security": [
           {
             "token": []
@@ -341,22 +333,19 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       }
     },
-    "/me": {
-      "summary": "Operations related to one's own user account.",
+    "/users/me": {
+      "summary": "Operations related to currently logged in user's account.",
       "get": {
         "tags": [
           "users"
         ],
-        "summary": "fetch my user details",
+        "summary": "fetch current user details",
         "description": "Get the user information about the currently logged in user.",
-        "operationId": "MyselfFetch",
+        "operationId": "GetCurrentUser",
         "security": [
           {
             "token": []
@@ -371,72 +360,16 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "users"
-        ],
-        "summary": "replace my user details",
-        "description": "Replace the user record of the currently logged in user in the server with the following data.",
-        "operationId": "MyselfReplace",
-        "security": [
-          {
-            "token": []
-          }
-        ],
-        "requestBody": {
-          "description": "Details to replace in the server user record.",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "./schema/MyselfReplace.json"
-              },
-              "example": {
-                "name": "Alex"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Replace user details successful"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          },
-          "415": {
-            "$ref": "#/components/responses/UnsupportedMediaType"
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableContent"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       },
       "patch": {
+        "summary": "update currently logged in user's details",
         "tags": [
           "users"
         ],
-        "summary": "update my user details",
         "description": "Update the user information for the currently logged in user.",
-        "operationId": "MyselfUpdate",
+        "operationId": "UpdateUser",
         "security": [
           {
             "token": []
@@ -448,7 +381,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./schema/MyselfUpdate.json"
+                "$ref": "./schema/UserUpdater.json"
               },
               "example": {
                 "name": "Alex"
@@ -477,9 +410,6 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       },
@@ -489,7 +419,7 @@
         ],
         "summary": "delete user details",
         "description": "Remove the user record from the server for the currently logged in user.",
-        "operationId": "MyselfRemove",
+        "operationId": "DeleteUser",
         "security": [
           {
             "token": []
@@ -507,9 +437,6 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "default": {
-            "$ref": "#/components/responses/DefaultResponse"
           }
         }
       }
@@ -522,7 +449,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "./schema/UserResponse.json"
+              "$ref": "./schema/User.json"
             },
             "example": {
               "id": "zjkhbumnhp6v5eld",
@@ -531,9 +458,6 @@
             }
           }
         }
-      },
-      "DefaultResponse": {
-        "description": "Could not serve the request due to certain issues."
       },
       "BadRequest": {
         "description": "Cannot serve content because of malformed request body or syntax"
@@ -554,7 +478,7 @@
         "description": "The media format of the requested data is not supported by the server, so the server is rejecting the request."
       },
       "UnprocessableContent": {
-        "description": "The request was well-formed but was unable to be followed due to semantic errorsor validation failure."
+        "description": "The request was well-formed but was unable to be followed due to semantic errors or validation failure."
       },
       "InternalServerError": {
         "description": "The server has encountered a situation it does not know how to handle."
@@ -572,38 +496,23 @@
         },
         "example": "536j5khg64jh632i"
       },
-      "order": {
-        "name": "order",
-        "in": "query",
-        "description": "*order* defines the sorting order of the entries (ascending or descending). Default: 'asc'",
-        "schema": {
-          "enum": [
-            "asc",
-            "dsc"
-          ]
-        },
-        "example": "asc"
-      },
       "size": {
         "name": "size",
         "in": "query",
         "description": "*size* defines the maximum entries per page (or page size).",
         "schema": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 50,
-          "example": 20
-        }
+          "$ref": "./schema/Pagination.json#/properties/size"
+        },
+        "example": 20
       },
       "page": {
         "name": "page",
         "in": "query",
         "description": "*page* is used for requesting a specific page for pagination.",
         "schema": {
-          "type": "number",
-          "minimum": 0,
-          "example": 3
-        }
+          "$ref": "./schema/Pagination.json#/properties/page"
+        },
+        "example": 3
       }
     },
     "headers": {
@@ -612,7 +521,7 @@
         "schema": {
           "type": "string"
         },
-        "example": "<http://example.com/TheBook/chapter2>; rel=\"previous\"; title=\"previous chapter\""
+        "example": "<https://example.com/TheBook/chapter2>; rel=\"previous\"; title=\"previous chapter\""
       }
     },
     "securitySchemes": {

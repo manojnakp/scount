@@ -74,7 +74,7 @@ type LoginResponse struct {
 // PasswordChange is the JSON request body format
 // at the `/auth/change` endpoint.
 type PasswordChange struct {
-	// /docs/PasswordChange.json
+	// /docs/ChangePassword.json
 	// Schema string `json:"$schema,omitempty"`
 	Old string `json:"old"`
 	New string `json:"new"`

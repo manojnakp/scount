@@ -29,7 +29,7 @@ const PageSize = 5
 
 // UserInfo is the JSON response body for user request fetch request.
 type UserInfo struct {
-	// /docs/UserResponse.json
+	// /docs/User.json
 	Schema string `json:"$schema,omitempty"`
 	Id     string `json:"id"`
 	Email  string `json:"email"`
@@ -70,7 +70,7 @@ func (res UserResource) fetch(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK) // ALL OK
 	_ = json.NewEncoder(w).Encode(UserInfo{
-		Schema: "/docs/UserResponse.json",
+		Schema: "/docs/User.json",
 		Id:     user.Uid,
 		Email:  user.Email,
 		Name:   user.Username,
