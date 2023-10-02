@@ -16,7 +16,7 @@
     },
     "sort": {
       "type": "array",
-      "uniqueItems": "true",
+      "uniqueItems": true,
       "items": {
         "oneOf": [
           {
