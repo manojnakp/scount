@@ -14,41 +14,40 @@ import (
 )
 
 // filesystem embedding `./docs/static` contains json files (mostly schema definitions),
-// OpenAPI spec and API documentation as `index.html` file.
+// OpenAPI spec and API documentation as `ref.html` file.
 //
-//go:embed docs/static
+//go:embed openapi.json schema doc/ref.html
 var filesystem embed.FS
 
-// DocHandler serves documentation resources.
-type DocHandler struct{}
+// FileServer serves documentation resources.
+type FileServer struct{}
 
-// Router gives a chi router for the DocHandler.
-func (d DocHandler) Router() chi.Router {
+// Router gives a chi router for the FileServer.
+func (f FileServer) Router() chi.Router {
 	r := chi.NewRouter()
 	// serve json files like 'openapi.json'
 	r.Get("/schema/*", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParamFromCtx(r.Context(), "*")
-		d.ServeFile(w, r, path.Join("schema", filename))
+		f.ServeFile(w, path.Join("schema", filename))
 	})
-	r.Handle("/docs/", http.RedirectHandler("/docs.html", http.StatusMovedPermanently))
 	r.Get("/openapi.json", func(w http.ResponseWriter, r *http.Request) {
-		d.ServeFile(w, r, "openapi.json")
+		f.ServeFile(w, "openapi.json")
 	})
-	// serve html docs
-	r.Get("/docs.html", func(w http.ResponseWriter, r *http.Request) {
-		d.ServeFile(w, r, "index.html")
+	// serve html API reference file
+	r.Get("/ref.html", func(w http.ResponseWriter, r *http.Request) {
+		f.ServeFile(w, "doc/ref.html")
 	})
 	return r
 }
 
 // ServeHTTP implements http.Handler on DocHandler.
-func (d DocHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	d.Router().ServeHTTP(w, r)
+func (f FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	f.Router().ServeHTTP(w, r)
 }
 
 // ServeFile is a utility method for streaming a file from `/docs`.
-func (d DocHandler) ServeFile(w http.ResponseWriter, _ *http.Request, filename string) {
-	file, err := filesystem.Open(path.Join("docs/static", filename))
+func (FileServer) ServeFile(w http.ResponseWriter, filename string) {
+	file, err := filesystem.Open(filename)
 	if err != nil {
 		log.Println(err)
 		// all these known errors to be treated as '404: Not Found'
@@ -63,9 +62,9 @@ func (d DocHandler) ServeFile(w http.ResponseWriter, _ *http.Request, filename s
 		return
 	}
 	extension := path.Ext(filename)
-	mediatype := mime.TypeByExtension(extension)
-	if mediatype != "" {
-		w.Header().Set("Content-Type", mediatype)
+	mediaType := mime.TypeByExtension(extension)
+	if mediaType != "" {
+		w.Header().Set("Content-Type", mediaType)
 	}
 	_, _ = io.Copy(w, file)
 }

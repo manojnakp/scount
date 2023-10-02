@@ -17,7 +17,7 @@ import (
 const BCryptCost = 12
 
 // RegisterRequest is the JSON request body format
-// at the `/auth/register` endpoint.
+// at the `/auth/RegisterUser` endpoint.
 type RegisterRequest struct {
 	// /docs/RegisterRequest.json
 	// Schema string `json:"$schema,omitempty"`
@@ -38,7 +38,7 @@ func (r RegisterRequest) Validate() error {
 }
 
 // RegisterResponse is the JSON response format
-// at the `auth/register` endpoint.
+// at the `auth/RegisterUser` endpoint.
 type RegisterResponse struct {
 	// `/docs/RegisterResponse.json`
 	Schema string `json:"$schema,omitempty"`
@@ -46,7 +46,7 @@ type RegisterResponse struct {
 }
 
 // LoginRequest is the JSON request body format
-// at the `/auth/login` endpoint.
+// at the `/auth/LoginUser` endpoint.
 type LoginRequest struct {
 	// /docs/LoginRequest.json
 	// Schema string `json:"$schema,omitempty"`
@@ -64,25 +64,25 @@ func (r LoginRequest) Validate() error {
 }
 
 // LoginResponse is the JSON response body format
-// at the `/auth/login` endpoint.
+// at the `/auth/LoginUser` endpoint.
 type LoginResponse struct {
 	// `/docs/LoginResponse.json`
 	Schema string `json:"$schema,omitempty"`
 	Token  string `json:"token"`
 }
 
-// PasswordChange is the JSON request body format
-// at the `/auth/change` endpoint.
-type PasswordChange struct {
-	// /docs/PasswordChange.json
+// PasswordChanger is the JSON request body format
+// at the `/auth/ChangePassword` endpoint.
+type PasswordChanger struct {
+	// /docs/PasswordChanger.json
 	// Schema string `json:"$schema,omitempty"`
 	Old string `json:"old"`
 	New string `json:"new"`
 }
 
-// Validate implements Validator on PasswordChange.
+// Validate implements Validator on PasswordChanger.
 // Simply check non-empty.
-func (r PasswordChange) Validate() error {
+func (r PasswordChanger) Validate() error {
 	if r.Old == "" || r.New == "" {
 		return errors.New("api: validation failed")
 	}
@@ -98,11 +98,11 @@ type AuthResource struct {
 func (res AuthResource) Router() chi.Router {
 	r := chi.NewRouter()
 	r.With(BodyParser[RegisterRequest], Validware[RegisterRequest]).
-		Post("/register", res.register)
+		Post("/RegisterUser", res.RegisterUser)
 	r.With(BodyParser[LoginRequest], Validware[LoginRequest]).
-		Post("/login", res.login)
-	r.With(BodyParser[PasswordChange], Validware[PasswordChange], Authware).
-		Post("/change", res.change)
+		Post("/LoginUser", res.LoginUser)
+	r.With(BodyParser[PasswordChanger], Validware[PasswordChanger], Authware).
+		Post("/ChangePassword", res.ChangePassword)
 	return r
 }
 
@@ -112,8 +112,8 @@ func (res AuthResource) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux.ServeHTTP(w, r)
 }
 
-// register handles user sign up.
-func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
+// RegisterUser handles user sign up.
+func (res AuthResource) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(BodyKey).(RegisterRequest)
 	uid := GenerateID()
 	password, err := bcrypt.GenerateFromPassword([]byte(body.Password), BCryptCost)
@@ -156,8 +156,8 @@ func (res AuthResource) register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// login handles user sign in.
-func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
+// LoginUser handles user sign in.
+func (res AuthResource) LoginUser(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(BodyKey).(LoginRequest)
 	user, err := res.DB.Users.FindByEmail(r.Context(), body.Email)
 	if err != nil {
@@ -199,10 +199,10 @@ func (res AuthResource) login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// change handles password update requests.
-func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
-	body := r.Context().Value(BodyKey).(PasswordChange) // BodyParser
-	id := r.Context().Value(AuthUserKey).(string)       // Authware
+// ChangePassword handles password update requests.
+func (res AuthResource) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	body := r.Context().Value(BodyKey).(PasswordChanger) // BodyParser
+	id := r.Context().Value(AuthUserKey).(string)        // Authware
 	// fetch user details
 	user, err := res.DB.Users.FindOne(r.Context(), &db.UserId{Uid: id})
 	if err != nil {
@@ -262,5 +262,4 @@ func (res AuthResource) change(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent) // ALL OK
-	return
 }

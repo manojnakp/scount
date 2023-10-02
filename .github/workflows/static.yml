@@ -26,14 +26,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-          sparse-checkout: docs
           path: branch-main
       # move content to corresponding directory
       - name: Move doc content
         run: |
-          mkdir -p public/ref &&
-          mv branch-main/docs/static/* public/ref &&
-          mv branch-main/docs/intro branch-main/docs/design src/content/docs/
+          mv branch-main/openapi.json public/ &&
+          mv branch-main/schema public/ &&
+          mv branch-main/doc/ref.html public/ &&
+          mv branch-main/doc/intro branch-main/doc/design src/content/docs/
       # build with astro
       - name: Astro build
         uses: withastro/action@v0

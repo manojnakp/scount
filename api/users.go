@@ -1,39 +1,101 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
+
+	"github.com/manojnakp/scount/api/internal"
 
 	"github.com/manojnakp/scount/db"
 
 	"github.com/go-chi/chi/v5"
 )
 
-// userSortMap maps allowed values of *sort* query parameter to
-// corresponding columns for user resource queries.
-var userSortMap = map[string]db.Column{
-	"":      "uid",
-	"id":    "uid",
-	"email": "email",
-	"name":  "username",
+// UserSchema is the location for `User` JSON schema.
+const UserSchema = "/schema/User.json"
+
+// ErrUserQuery defines parsing errors for UserQuery.
+var ErrUserQuery = errors.New("invalid user query parameters")
+
+// UserSorter is the default sort order for user queries.
+var UserSorter = []db.Sorter{
+	{
+		Column: "uid",
+	},
 }
 
-// PageSize is the default number of items limit to a page.
-const PageSize = 5
+// UserQuery defines the query parameters for user collection resource.
+// Schema defined in `UserQuery.json`.
+type UserQuery struct {
+	Id     string
+	Email  string
+	Name   string
+	Sort   []db.Sorter
+	Paging Paginator
+}
 
-// UserInfo is the JSON response body for user request fetch request.
-type UserInfo struct {
-	// /docs/UserResponse.json
+// ParseUserQuery parses the query parameters on user collection resource.
+func ParseUserQuery(query url.Values) (*UserQuery, error) {
+	id := query.Get("id")
+	email := query.Get("email")
+	name := query.Get("name")
+	paging, err := ParsePaginator(query)
+	if err != nil {
+		return nil, err
+	}
+	sort := strings.Split(query.Get("sort"), ",")
+	if len(sort) == 0 {
+		// default sort condition
+		return &UserQuery{
+			Id:     id,
+			Email:  email,
+			Name:   name,
+			Sort:   UserSorter,
+			Paging: paging,
+		}, nil
+	}
+	list := make([]db.Sorter, 0)
+	for _, s := range sort {
+		sorter, ok := internal.UserSortMap[strings.TrimSpace(s)]
+		if !ok {
+			return nil, fmt.Errorf("%w: invalid 'sort' parameter", ErrUserQuery)
+		}
+		list = append(list, sorter)
+	}
+	return &UserQuery{
+		Id:     id,
+		Email:  email,
+		Name:   name,
+		Sort:   list,
+		Paging: paging,
+	}, nil
+}
+
+// User is the JSON response body for user request fetch request.
+// JSON schema defined in `User.json`.
+type User struct {
 	Schema string `json:"$schema,omitempty"`
 	Id     string `json:"id"`
 	Email  string `json:"email"`
 	Name   string `json:"name"`
+}
+
+// UserUpdater is JSON request for updating (PATCH) `/me` resource.
+type UserUpdater struct {
+	// /docs/UserUpdater.json
+	// Schema string `json:"$schema,omitempty"`
+	Username string `json:"username,omitempty"`
+}
+
+// Validate implements Validator on UserUpdater.
+func (UserUpdater) Validate() error {
+	return nil
 }
 
 // UserResource is http.Handler for all requests to `/users`.
@@ -45,8 +107,13 @@ type UserResource struct {
 func (res UserResource) Router() chi.Router {
 	r := chi.NewRouter()
 	r.Use(Authware)
-	r.Get("/", res.list)
-	r.Get("/{uid}", res.fetch)
+	r.With(QueryParser(ParseUserQuery)).
+		Get("/", res.ListUsers)
+	r.Get("/{uid}", res.GetUser)
+	r.With(res.setCurrentUser).
+		Get("/me", res.GetCurrentUser)
+	r.Patch("/me", res.UpdateUser)
+	r.Delete("/me", res.DeleteUser)
 	return r
 }
 
@@ -56,9 +123,9 @@ func (res UserResource) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux.ServeHTTP(w, r)
 }
 
-// fetch handles requests at `/users/{uid}`.
+// fetch obtains user resource for the given user id (obtained from context).
 func (res UserResource) fetch(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "uid") // url parameter
+	id := r.Context().Value(UserKey).(string)
 	user, err := res.DB.Users.FindOne(r.Context(), &db.UserId{Uid: id})
 	switch {
 	case errors.Is(err, db.ErrNoRows): // uid not exist
@@ -69,54 +136,109 @@ func (res UserResource) fetch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK) // ALL OK
-	_ = json.NewEncoder(w).Encode(UserInfo{
-		Schema: "/docs/UserResponse.json",
+	_ = json.NewEncoder(w).Encode(User{
+		Schema: UserSchema,
 		Id:     user.Uid,
 		Email:  user.Email,
 		Name:   user.Username,
 	})
 }
 
-// list handles requests at `/users`.
-func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm() // populates url query parameters to r.Form.
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+// setCurrentUser sets the currently logged-in user id at UserKey.
+func (res UserResource) setCurrentUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		uid := ctx.Value(AuthUserKey).(string)
+		ctx = context.WithValue(ctx, UserKey, uid)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// GetUser handles requests at `/users/{uid}`.
+func (res UserResource) GetUser(w http.ResponseWriter, r *http.Request) {
+	uid := chi.URLParam(r, "uid")
+	ctx := context.WithValue(r.Context(), UserKey, uid)
+	res.fetch(w, r.WithContext(ctx))
+}
+
+// GetCurrentUser is http.HandlerFunc for `/users/me` GET request.
+func (res UserResource) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+	res.fetch(w, r)
+}
+
+// UpdateUser is http.HandlerFunc for `/users/me` PATCH request.
+func (res UserResource) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	id := r.Context().Value(UserKey).(string)
+	updater := r.Context().Value(BodyKey).(UserUpdater)
+	var zero UserUpdater
+	// nothing to update: success
+	if updater == zero {
+		w.WriteHeader(http.StatusNoContent)
 		return
-	}
-	query, err := ParseUserParams(r.Form)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	filter := &db.UserFilter{
-		Uid:      query.Id,
-		Email:    query.Email,
-		Username: query.Name,
-	}
-	projector := &db.Projector{
-		Order: query.Sort,
-		Paging: &db.Paging{
-			Limit:  query.Size,
-			Offset: query.Size * query.Page,
-		},
 	}
 	// database call
-	users, err := res.DB.Users.Find(r.Context(), filter, projector)
+	err := res.DB.Users.UpdateOne(
+		r.Context(),
+		&db.UserId{Uid: id},
+		&db.UserUpdater{Username: updater.Username},
+	)
+	switch {
+	case errors.Is(err, db.ErrNoRows):
+		// also considered success
+	case errors.Is(err, db.ErrConflict): // conflict
+		w.WriteHeader(http.StatusConflict)
+		return
+	case err != nil: // unknown error
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent) // ALL OK
+}
+
+// DeleteUser handles DELETE method on `users/me` route.
+func (res UserResource) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	id := r.Context().Value(UserKey).(string)
+	err := res.DB.Users.DeleteOne(r.Context(), &db.UserId{Uid: id})
+	switch {
+	case errors.Is(err, db.ErrNoRows):
+	// also considered success
+	case errors.Is(err, db.ErrConflict):
+		w.WriteHeader(http.StatusConflict)
+		return
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListUsers handles requests at `/users`.
+func (res UserResource) ListUsers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	query := ctx.Value(QueryKey).(*UserQuery)
+	page, size := query.Paging.Page, query.Paging.Size
+	// database call
+	users, err := res.DB.Users.Find(
+		ctx,
+		&db.UserFilter{Uid: query.Id, Email: query.Email, Username: query.Name},
+		&db.Projector{
+			Order:  query.Sort,
+			Paging: &db.Paging{Limit: size, Offset: size * page},
+		},
+	)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	// build response collection
-	list := make([]UserInfo, 0)
+	list := make([]User, 0)
 	users.Iterator(func(u db.User) bool {
-		list = append(list, UserInfo{
-			Id:    u.Uid,
-			Email: u.Email,
-			Name:  u.Username,
+		list = append(list, User{
+			Schema: UserSchema,
+			Id:     u.Uid,
+			Email:  u.Email,
+			Name:   u.Username,
 		})
 		return true
 	})
@@ -126,104 +248,8 @@ func (res UserResource) list(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	total := users.Total()
-	// link header
-	if total > 0 {
-		header := res.linkHeader(r.URL.Query(), query.Size, 0, total/query.Size)
-		w.Header().Set("Link", header)
-	}
+	links := PagingLinks("/users", r.URL.Query(), users.Total())
+	LinkHeader(w, links)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(list) // respond
-}
-
-// linkHeader returns `Link` header with pagination details for given
-// current, first and last pages.
-func (res UserResource) linkHeader(params url.Values, page, first, last int) string {
-	links := make([]string, 0, 4)
-	params.Set("page", strconv.Itoa(first))
-	links = append(links, linkHeader(params, "first"))
-	params.Set("page", strconv.Itoa(last))
-	links = append(links, linkHeader(params, "last"))
-	if page > 0 {
-		params.Set("page", strconv.Itoa(page-1))
-		links = append(links, linkHeader(params, "prev"))
-	}
-	if page < last {
-		params.Set("page", strconv.Itoa(page+1))
-		links = append(links, linkHeader(params, "next"))
-	}
-	return strings.Join(links, ", ")
-}
-
-// linkHeader returns the header of the form `</users?page=1>; rel="prev"`.
-func linkHeader(qs url.Values, rel string) string {
-	return fmt.Sprintf("<%s>; rel=%q", "/users?"+qs.Encode(), rel)
-}
-
-// UserParams is used for parsing the query parameters for list handler.
-type UserParams struct {
-	Id, Email, Name string
-	Sort            []db.Sorter
-	Size, Page      int
-}
-
-// ParseUserParams parses and validates the given query parameters
-// into UserParams that can be consumed by UserResource.list.
-func ParseUserParams(qs url.Values) (params UserParams, err error) {
-	// validate `name`
-	name := qs.Get("name")
-	escaper := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	name = "%" + escaper.Replace(name) + "%"
-	// parse `sort`
-	sort, err := ParseSortOrder(qs["sort"], userSortMap)
-	if err != nil {
-		return
-	}
-	size, page := PageSize, 0
-	// parse `size` and `page`
-	qsize := qs.Get("size")
-	qpage := qs.Get("page")
-	if qsize != "" {
-		size, err = strconv.Atoi(qsize)
-	}
-	if qpage != "" {
-		page, err = strconv.Atoi(qpage)
-	}
-	if err != nil {
-		return
-	}
-	if size <= 0 || size > 50 {
-		err = errors.New("api: invalid query parameter")
-		return
-	}
-	if page < 0 {
-		err = errors.New("api: invalid query parameter")
-		return
-	}
-	return UserParams{
-		Id:    qs.Get("id"),
-		Email: qs.Get("email"),
-		Name:  name,
-		Sort:  sort,
-		Size:  size,
-		Page:  page,
-	}, nil
-}
-
-// ParseSortOrder parses `sort` query parameter and returns list of sorting order
-// on database columns.
-func ParseSortOrder(values []string, columns map[string]db.Column) ([]db.Sorter, error) {
-	ans := make([]db.Sorter, 0, len(values))
-	for _, query := range values {
-		qs, desc := strings.CutSuffix(query, "~")
-		col, ok := columns[qs]
-		if !ok {
-			return nil, errors.New("api: invalid query parameter")
-		}
-		ans = append(ans, db.Sorter{
-			Column: col,
-			Desc:   desc,
-		})
-	}
-	return ans, nil
 }

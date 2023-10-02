@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "query parameters for filtering users",
+  "description": "Collections of user resources can be filtered before queried using the query parameters that for this object.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "name": {
+      "type": "string"
+    },
+    "sort": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "oneOf": [
+          {
+            "enum": [
+              "id",
+              "name",
+              "email"
+            ]
+          },
+          {
+            "enum": [
+              "~id",
+              "~name",
+              "~email"
+            ]
+          }
+        ]
+      },
+      "default": [
+        "id"
+      ]
+    },
+    "size": {
+      "$ref": "Paginator.json#/properties/size"
+    },
+    "page": {
+      "$ref": "Paginator.json#/properties/page"
+    }
+  },
+  "examples": [
+    {
+      "name": "alice",
+      "sort": [
+        "id",
+        "~email"
+      ],
+      "size": 10,
+      "page": 2
+    },
+    {}
+  ]
+}
