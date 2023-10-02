@@ -21,7 +21,7 @@ export default defineConfig({
 				},
 				{
 					label: 'API Reference',
-					link: '/ref/',
+					link: '/ref.html',
 				},
 			],
 			lastUpdated: true,
