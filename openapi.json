@@ -501,7 +501,7 @@
         "in": "query",
         "description": "*size* defines the maximum entries per page (or page size).",
         "schema": {
-          "$ref": "./schema/Pagination.json#/properties/size"
+          "$ref": "./schema/Paginator.json#/properties/size"
         },
         "example": 20
       },
@@ -510,7 +510,7 @@
         "in": "query",
         "description": "*page* is used for requesting a specific page for pagination.",
         "schema": {
-          "$ref": "./schema/Pagination.json#/properties/page"
+          "$ref": "./schema/Paginator.json#/properties/page"
         },
         "example": 3
       }
