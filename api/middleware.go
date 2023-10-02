@@ -6,6 +6,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 
@@ -18,6 +19,8 @@ import (
 var (
 	BodyKey     internal.BodyKey
 	AuthUserKey internal.AuthUserKey
+	UserKey     internal.UserKey
+	QueryKey    internal.QueryKey
 )
 
 // Middleware is a convenient alias for http middleware.
@@ -53,6 +56,29 @@ func BodyParser[T any](next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), BodyKey, body)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// QueryParser is a generic url query parser. Parsed query parameters
+// are stored in context with key QueryKey.
+func QueryParser[T any](parser func(url.Values) (T, error)) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			err := r.ParseForm()
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			query, err := parser(r.Form)
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			ctx := context.WithValue(r.Context(), QueryKey, query)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 // Validware is middleware for validation of request body.
