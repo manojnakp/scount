@@ -221,10 +221,7 @@ func (res UserResource) ListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := res.DB.Users.Find(
 		ctx,
 		&db.UserFilter{Uid: query.Id, Email: query.Email, Username: query.Name},
-		&db.Projector{
-			Order:  query.Sort,
-			Paging: &db.Paging{Limit: size, Offset: size * page},
-		},
+		&db.Projector{Order: query.Sort, Paging: &db.Paging{Limit: size, Offset: size * page}},
 	)
 	if err != nil {
 		log.Println(err)
