@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "response body that represents scount resource",
+  "description": "The scount information corresponding to the requested scount id *sid*.",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "A unique ID associated with the Scount."
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the Scount."
+    },
+    "description": {
+      "type": "string",
+      "format": "markdown",
+      "description": "Human-Friendly description of the Scount in markdown"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Unique id of the user who owns this Scount."
+    }
+  },
+  "examples": []
+}

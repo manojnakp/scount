@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "request body for scount create request",
+  "description": "Supply Scount title and description to create a new scount.",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the Scount to be created."
+    },
+    "description": {
+      "type": "string",
+      "format": "markdown",
+      "title": "Human-friendly description of the Scount."
+    }
+  },
+  "examples": [
+    {
+      "title": "City Trip",
+      "description": "Sample Scount for test run."
+    },
+    {
+      "title": "Month-End Party",
+      "description": "Bills split for the Month-End party."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "request body to update scount resource",
+  "description": "Update the scount record with the following data setting only the requested fields.",
+  "properties": {
+    "owner": {
+      "type": "string",
+      "description": "user id of the new owner to be updated"
+    },
+    "title": {
+      "type": "string",
+      "description": "New title to be updated"
+    }
+  },
+  "examples": []
+}

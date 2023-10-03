@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "query parameters for filtering scounts",
+  "description": "Collections of user resources can be filtered before request using the query parameters for this object.",
+  "type": "object",
+  "properties": {
+    "sid": {
+      "type": "string"
+    },
+    "uid": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "sort": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "oneOf": [
+          {
+            "enum": [
+              "sid",
+              "uid",
+              "owner",
+              "title"
+            ]
+          },
+          {
+            "enum": [
+              "~sid",
+              "~uid",
+              "~owner",
+              "~title"
+            ]
+          }
+        ]
+      }
+    },
+    "default": [
+      "sid"
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "response body for new scount creation",
+  "description": "Upon successful scount creation, the unique *scount id* is presented",
+  "properties": {
+    "scount_id": {
+      "type": "string",
+      "description": "A unique ID of the newly created Scount"
+    }
+  },
+  "examples": [
+    {
+      "scount_id": "uh1o5iuh1o2f8y5n"
+    },
+    {
+      "scount_id": "q34foi51by2q74y8"
+    }
+  ]
+}
