@@ -521,7 +521,7 @@
         ],
         "summary": "list all matching scounts",
         "description": "Get a list of all scounts filtered by requested fields. Multiple fields are composed using **AND** operator.",
-        "operationId": "ListUsers",
+        "operationId": "ListScounts",
         "security": [
           {
             "token": []
@@ -622,6 +622,7 @@
         "tags": [
           "scounts"
         ],
+        "operationId": "GetScount",
         "summary": "fetch scount information",
         "description": "Get the scount information about the one requested by id",
         "security": [
