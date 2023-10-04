@@ -21,6 +21,7 @@ var (
 	AuthUserKey internal.AuthUserKey
 	UserKey     internal.UserKey
 	QueryKey    internal.QueryKey
+	ScountKey   internal.ScountKey
 )
 
 // Middleware is a convenient alias for http middleware.

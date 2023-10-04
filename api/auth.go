@@ -17,9 +17,9 @@ import (
 const BCryptCost = 12
 
 // RegisterRequest is the JSON request body format
-// at the `/auth/RegisterUser` endpoint.
+// at the `/auth/register` endpoint.
 type RegisterRequest struct {
-	// /docs/RegisterRequest.json
+	// /schema/RegisterRequest.json
 	// Schema string `json:"$schema,omitempty"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -38,17 +38,17 @@ func (r RegisterRequest) Validate() error {
 }
 
 // RegisterResponse is the JSON response format
-// at the `auth/RegisterUser` endpoint.
+// at the `auth/register` endpoint.
 type RegisterResponse struct {
-	// `/docs/RegisterResponse.json`
+	// `/schema/RegisterResponse.json`
 	Schema string `json:"$schema,omitempty"`
 	UserId string `json:"user_id"`
 }
 
 // LoginRequest is the JSON request body format
-// at the `/auth/LoginUser` endpoint.
+// at the `/auth/login` endpoint.
 type LoginRequest struct {
-	// /docs/LoginRequest.json
+	// /schema/LoginRequest.json
 	// Schema string `json:"$schema,omitempty"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -64,17 +64,17 @@ func (r LoginRequest) Validate() error {
 }
 
 // LoginResponse is the JSON response body format
-// at the `/auth/LoginUser` endpoint.
+// at the `/auth/login` endpoint.
 type LoginResponse struct {
-	// `/docs/LoginResponse.json`
+	// `/schema/LoginResponse.json`
 	Schema string `json:"$schema,omitempty"`
 	Token  string `json:"token"`
 }
 
 // PasswordChanger is the JSON request body format
-// at the `/auth/ChangePassword` endpoint.
+// at the `/auth/change` endpoint.
 type PasswordChanger struct {
-	// /docs/PasswordChanger.json
+	// /schema/PasswordChanger.json
 	// Schema string `json:"$schema,omitempty"`
 	Old string `json:"old"`
 	New string `json:"new"`
@@ -98,11 +98,11 @@ type AuthResource struct {
 func (res AuthResource) Router() chi.Router {
 	r := chi.NewRouter()
 	r.With(BodyParser[RegisterRequest], Validware[RegisterRequest]).
-		Post("/RegisterUser", res.RegisterUser)
+		Post("/register", res.RegisterUser)
 	r.With(BodyParser[LoginRequest], Validware[LoginRequest]).
-		Post("/LoginUser", res.LoginUser)
+		Post("/login", res.LoginUser)
 	r.With(BodyParser[PasswordChanger], Validware[PasswordChanger], Authware).
-		Post("/ChangePassword", res.ChangePassword)
+		Post("/change", res.ChangePassword)
 	return r
 }
 
@@ -147,11 +147,11 @@ func (res AuthResource) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 	// newly created user resource at location
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Location", path.Join("/users/", uid))
+	w.Header().Set("Location", path.Join("/users", uid))
 	w.WriteHeader(http.StatusOK)
 	// json response
 	_ = json.NewEncoder(w).Encode(RegisterResponse{
-		Schema: path.Join("/docs/", "RegisterResponse.json"),
+		Schema: path.Join("/schema", "RegisterResponse.json"),
 		UserId: uid,
 	})
 }
@@ -194,7 +194,7 @@ func (res AuthResource) LoginUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(LoginResponse{
-		Schema: path.Join("/docs/", "LoginResponse.json"),
+		Schema: path.Join("/schema", "LoginResponse.json"),
 		Token:  string(token),
 	})
 }

@@ -245,7 +245,7 @@
           {
             "name": "sort",
             "in": "query",
-            "description": "*sort* defines the field on which entries are sorted. Default: 'id'",
+            "description": "*sort* defines the fields on which entries are sorted.",
             "schema": {
               "$ref": "./schema/UserQuery.json#/properties/sort"
             },
@@ -440,6 +440,291 @@
           }
         }
       }
+    },
+    "/scounts": {
+      "summary": "Operations related to collection of scount resources",
+      "post": {
+        "tags": [
+          "scounts"
+        ],
+        "summary": "create new scount",
+        "description": "Create new Scount owned by current user",
+        "operationId": "CreateScount",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "requestBody": {
+          "description": "Scount details to be created",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./schema/ScountRequest.json"
+              },
+              "example": {
+                "title": "City Trip",
+                "description": "Sample Scount for test run."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scount creation successful, here's the scount id.",
+            "headers": {
+              "location": {
+                "description": "URI of the scount resource for the newly created Scount",
+                "schema": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "URI of scount resource for the newly created Scount"
+                },
+                "example": "/scounts/i562g3i6wj5i6gh3"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schema/ScountResponse.json"
+                },
+                "example": {
+                  "scount_id": "q34foi51by2q74y8"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableContent"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "scounts"
+        ],
+        "summary": "list all matching scounts",
+        "description": "Get a list of all scounts filtered by requested fields. Multiple fields are composed using **AND** operator.",
+        "operationId": "ListScounts",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "query",
+            "description": "unique id of the scount (exact match)",
+            "schema": {
+              "$ref": "./schema/ScountQuery.json#/properties/sid"
+            },
+            "example": ""
+          },
+          {
+            "name": "uid",
+            "in": "query",
+            "description": "user id of a member belonging to the scount (exact match)",
+            "schema": {
+              "$ref": "./schema/ScountQuery.json#/properties/uid"
+            }
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "description": "unique id of the user who owns this scount (exact match)",
+            "schema": {
+              "$ref": "./schema/ScountQuery.json#/properties/owner"
+            }
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "description": "title of the scount being queried (approx match) *case insensitive*",
+            "schema": {
+              "$ref": "./schema/ScountQuery.json#/properties/title"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "*sort* defines the fields on which the entries are sorted.",
+            "schema": {
+              "$ref": "./schema/ScountQuery.json#/properties/sort"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/size"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "list of scounts that satisfy the requested filters",
+            "headers": {
+              "link": {
+                "$ref": "#/components/headers/link"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "./schema/Scount.json"
+                  }
+                },
+                "example": []
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableContent"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/scounts/{sid}": {
+      "summary": "operations related to the scount with given sid",
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/scount_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "scounts"
+        ],
+        "operationId": "GetScount",
+        "summary": "fetch scount information",
+        "description": "Get the scount information about the one requested by id",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scount information about the requested scount resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schema/Scount.json"
+                },
+                "example": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "summary": "update the scount resource",
+        "tags": [
+          "scounts"
+        ],
+        "description": "Update the Scount for the one referred to in the path by *sid*",
+        "operationId": "UpdateScount",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "requestBody": {
+          "description": "Scount details to be updated",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./schema/ScountUpdater.json"
+              },
+              "example": {}
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Update scount details successful"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableContent"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "scounts"
+        ],
+        "summary": "delete scount resource",
+        "description": "Remove the scount record from the collection of scounts",
+        "operationId": "DeleteScount",
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Remove scount details successful"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -452,7 +737,7 @@
               "$ref": "./schema/User.json"
             },
             "example": {
-              "id": "zjkhbumnhp6v5eld",
+              "id": "gh2qco83ij2l34h5",
               "email": "john@jdoe.net",
               "name": "John Doe"
             }
@@ -495,6 +780,17 @@
           "description": "user id of the requested user"
         },
         "example": "536j5khg64jh632i"
+      },
+      "scount_id": {
+        "name": "sid",
+        "in": "path",
+        "description": "*sid* is the scount id that uniquely identifies the requested scount resource.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "scount id of the requested scount"
+        },
+        "example": "j1l2j4ij9ias9fi8"
       },
       "size": {
         "name": "size",
@@ -541,6 +837,14 @@
     {
       "name": "users",
       "description": "Operations related users"
+    },
+    {
+      "name": "scounts",
+      "description": "Operations related to scounts"
+    },
+    {
+      "name": "members",
+      "description": "Operations related to scount members"
     }
   ]
 }

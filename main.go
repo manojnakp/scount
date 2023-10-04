@@ -31,6 +31,8 @@ func main() {
 	r.Mount("/auth", api.AuthResource{DB: store}.Router())
 	r.Mount("/users", api.UserResource{DB: store}.Router())
 	r.Handle("/users/", http.RedirectHandler("/users", http.StatusMovedPermanently))
+	r.Mount("/scounts", api.ScountResource{DB: store}.Router())
+	r.Handle("/scounts/", http.RedirectHandler("/scounts", http.StatusMovedPermanently))
 	r.HandleFunc("/health", HealthCheck)
 	_ = http.ListenAndServe(":8080", r)
 }
