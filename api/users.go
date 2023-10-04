@@ -50,23 +50,22 @@ func ParseUserQuery(query url.Values) (*UserQuery, error) {
 		return nil, err
 	}
 	sort := strings.Split(query.Get("sort"), ",")
-	if len(sort) == 0 {
-		// default sort condition
-		return &UserQuery{
-			Id:     id,
-			Email:  email,
-			Name:   name,
-			Sort:   UserSorter,
-			Paging: paging,
-		}, nil
-	}
-	list := make([]db.Sorter, 0)
+	list := make([]db.Sorter, 0, len(sort))
 	for _, s := range sort {
-		sorter, ok := internal.UserSortMap[strings.TrimSpace(s)]
+		s = strings.TrimSpace(s)
+		// skip empty string
+		if s == "" {
+			continue
+		}
+		sorter, ok := internal.UserSortMap[s]
 		if !ok {
 			return nil, fmt.Errorf("%w: invalid 'sort' parameter", ErrUserQuery)
 		}
 		list = append(list, sorter)
+	}
+	// fallback to default sorter
+	if len(list) == 0 {
+		list = UserSorter
 	}
 	return &UserQuery{
 		Id:     id,

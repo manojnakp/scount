@@ -40,7 +40,7 @@ type ScountQuery struct {
 
 // ParseScountQuery parses the query parameters on scount collection resource.
 func ParseScountQuery(url.Values) (*ScountQuery, error) {
-	return nil, nil
+	return new(ScountQuery), nil
 }
 
 // ScountRequest describes new scount creation request.
